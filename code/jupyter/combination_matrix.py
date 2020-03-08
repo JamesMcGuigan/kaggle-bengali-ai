@@ -21,7 +21,7 @@ def combination_matrix(dataset: pd.DataFrame, x: str, y: str, z: str,
     """
     unique_y = sorted(dataset[y].unique())
     combinations = pd.DataFrame({
-        n: dataset.query(f'{y} == {n}')
+        n: dataset.where(lambda df: df[y] == n)
             .groupby(x)[z]
             .pipe(lambda df: df.unique() if unique else df )
             .apply(list)
