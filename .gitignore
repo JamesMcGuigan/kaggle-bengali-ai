@@ -18,5 +18,6 @@ node_modules/
 logs/
 
 ### Data
-input/
-
+input/*.zip
+input/bengaliai-cv19/
+!*/input/*.dvc

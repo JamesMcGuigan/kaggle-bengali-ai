@@ -1,0 +1,7 @@
+md5: 111e850ee3f2d12e5744c3f6f447a216
+outs:
+- md5: 464a9fc50b8d91d062828a83d6dc5e3a.dir
+  path: bengaliai-cv19
+  cache: true
+  metric: false
+  persist: false

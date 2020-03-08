@@ -1,0 +1,7 @@
+md5: 2950235ceb8497dbb5c36ae6920a9ba4
+outs:
+- md5: 58c60b08ce80dfc5fc47aeb7185ab516
+  path: bengaliai-cv19.zip
+  cache: true
+  metric: false
+  persist: false
