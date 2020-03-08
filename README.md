@@ -31,8 +31,8 @@ Deadline: 2020-03-16
 
 ## Dataset
 ```
-kaggle competitions download -c bengaliai-cv19 -p ./data/
-unzip ./data/bengaliai-cv19.zip -d ./data/
+kaggle competitions download -c bengaliai-cv19 -p ./input/
+unzip ./input/bengaliai-cv19.zip -d ./input/bengaliai-cv19/
 ```
 
 This dataset contains images of individual hand-written [Bengali characters](https://en.wikipedia.org/wiki/Bengali_alphabet). Bengali characters (graphemes) are written by combining three components: a grapheme_root
