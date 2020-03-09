@@ -1,5 +1,10 @@
-pip-tools
-pip-review
+### Assumed System Tools
+# pip-tools
+# pip-review
+# jupyter
+# jupyterlab
+# jupyter_contrib_nbextensions
+# kaggle
 
 ### Data Science
 numpy                  # <1.17 prevents tensorflow-gpu <=2.1.0 warnings
@@ -14,18 +19,18 @@ tensorflow-gpu==2.1.0  # tensorflow==2.1.0 emits depreciation warnings without n
 
 
 ### Visualization
-jupyter
-jupyterlab
 matplotlib
 seaborn
 pydot
 
 
 ### Utilities
-kaggle
+glob2
 humanize
 parquet                # apt install libsnappy-dev || brew install snappy
-
+pyarrow
+pyyaml
+simplejson
 
 ### Functional Programming
 more_itertools
