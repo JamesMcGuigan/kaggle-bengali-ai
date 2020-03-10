@@ -7,7 +7,7 @@ import time
 from tensorboard.plugins.hparams import api as hp
 from tensorflow_core.python.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping
 
-from code.dataset.DatasetDF import DatasetDF
+from src.dataset.DatasetDF import DatasetDF
 from vendor.CLR.clr_callback import CyclicLR
 
 hparam_defaults = {

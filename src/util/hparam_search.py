@@ -7,8 +7,8 @@ from typing import Dict, List, AnyStr
 import tensorflow as tf
 from tensorboard.plugins.hparams import api as hp
 
-from code.dataset.DatasetDF import DatasetDF
-from code.util import hparam
+from src.dataset.DatasetDF import DatasetDF
+from src.util import hparam
 
 
 def hparam_options_length(hparam_options_value) -> int:
