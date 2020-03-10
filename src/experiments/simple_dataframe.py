@@ -36,7 +36,7 @@ hparams = {
     "learning_rate": 0.001,
     "min_lr":        0.001,
     "batch_size":    128,
-    "patience":      3,
+    "patience":      5,
 }
 model_hparams = {
     "cnns_per_maxpool": 1,
@@ -77,21 +77,22 @@ for output_field in output_fields:
 
     models[output_field].summary()
 
-    for data_id in range(0,4):
-        print("------------------------------")
-        print(f"Training | {output_field} | {model_hparams} | data_id: {data_id}")
-        print("------------------------------")
-        dataset = DatasetDF(data_id=data_id, Y_field=output_field)
+    for loop in range(2):
+        for data_id in range(0,4):
+            print("------------------------------")
+            print(f"Training | {output_field} | {model_hparams} | data_id: {data_id}")
+            print("------------------------------")
+            dataset = DatasetDF(data_id=data_id, Y_field=output_field)
 
-        stats = model_compile_fit(
-            hparams    = { **hparams, **model_hparams },
-            model      = models[output_field],
-            dataset    = dataset,
-            model_file = model_files[output_field],
-            log_dir    = f"{dirs['logs']}/simple_dataframe/{output_field}/",
-            verbose    = True,
-        )
-        model_stats[output_field].append(stats)
+            stats = model_compile_fit(
+                hparams    = { **hparams, **model_hparams },
+                model      = models[output_field],
+                dataset    = dataset,
+                model_file = model_files[output_field],
+                log_dir    = f"{dirs['logs']}/simple_dataframe/{output_field}/",
+                verbose    = True,
+            )
+            model_stats[output_field].append(stats)
 
     print("------------------------------")
     print(f"Completed | {output_field} | {model_hparams}")

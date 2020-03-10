@@ -29,7 +29,7 @@ class DatasetDF():
             "test":  sorted(glob2.glob(f'{data_dir}/test_image_data_*.parquet')),  # Test dataset is very small
         }
         self.raw_images: Dict[AnyStr, DataFrame] = {
-            key: pd.concat([pd.read_parquet(file) for file in self.image_filenames[key]]).iloc[0:1000]
+            key: pd.concat([pd.read_parquet(file) for file in self.image_filenames[key]])  #.iloc[0:1000]
                  if len(self.image_filenames[key]) else pd.DataFrame()
             for key in self.image_filenames.keys()
         }
