@@ -1,11 +1,13 @@
+import math
 import re
+import time
 from typing import Dict, AnyStr
 
-import math
 import tensorflow as tf
-import time
-from tensorboard.plugins.hparams import api as hp
-from tensorflow_core.python.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping
+# from tensorboard.plugins.hparams.api import KerasCallback  # BUG: AttributeError: module 'tensorflow' has no attribute 'keras'
+from tensorboard.plugins.hparams.api import KerasCallback
+from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
+    ModelCheckpoint
 
 from src.dataset.DatasetDF import DatasetDF
 from vendor.CLR.clr_callback import CyclicLR
@@ -23,7 +25,7 @@ def min_lr(hparams):
     # tensorboard --logdir logs/convergence_search/min_lr-optimized_scheduler-random-scheduler/ --reload_multifile=true
     # There is a high degree of randomness in this parameter, so it is hard to distinguish from statistical noise
     # Lower min_lr values for CycleCR tend to train slower
-    hparams = dict(**hparam_defaults, **hparams)
+    hparams = { **hparam_defaults, **hparams }
     if 'min_lr'  in hparams:              return hparams['min_lr']
     if hparams["optimizer"] == "SGD":     return 1e05  # preferred by SGD
     else:                                 return 1e03  # fastest, least overfitting and most accidental high-scores
@@ -31,7 +33,7 @@ def min_lr(hparams):
 
 # DOCS: https://ruder.io/optimizing-gradient-descent/index.html
 def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
-    hparams = dict(**hparam_defaults, **hparams)
+    hparams = { **hparam_defaults, **hparams }
     if hparams['scheduler'] is 'constant':
         return LearningRateScheduler(lambda epocs: hparams['learning_rate'], verbose=False)
 
@@ -87,21 +89,40 @@ def model_compile_fit(
         hparams: Dict,
         model:   tf.keras.models.Model,
         dataset: DatasetDF,
+        model_file: AnyStr = None,
         log_dir: AnyStr = None,
         verbose = False,
 ):
-    hparams = dict(**hparam_defaults, **hparams)
+    hparams   = { **hparam_defaults, **hparams }
     optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
     schedule  = scheduler(hparams, dataset, verbose=verbose)
 
     callbacks = [
-        EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=hparams.get('patience', 10)),
+        EarlyStopping(
+            monitor='val_loss',
+            mode='min',
+            verbose=verbose,
+            patience=hparams.get('patience', hparams['patience']),
+            restore_best_weights=True
+        ),
         schedule,
+        # ProgbarLogger(count_mode='samples', stateful_metrics=None)
     ]
+    if model_file:
+        callbacks += [
+            ModelCheckpoint(
+                model_file,
+                monitor='val_loss',
+                verbose=False,
+                save_best_only=True,
+                save_weights_only=False,
+                mode='auto',
+            )
+        ]
     if log_dir:
         callbacks += [  
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
-            hp.KerasCallback(log_dir, hparams)                                  # log hparams
+            KerasCallback(log_dir, hparams)                                     # log hparams
         ]
 
     timer_start = time.time()

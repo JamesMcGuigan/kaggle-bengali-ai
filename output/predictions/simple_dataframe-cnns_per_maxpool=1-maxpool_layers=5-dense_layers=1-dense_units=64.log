@@ -1,0 +1,19 @@
+------------------------------
+Completed | consonant_diacritic | {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64}
+{'loss': 1.3720018884870742, 'accuracy': 0.5888889, 'val_loss': 1.778843641281128, 'val_accuracy': 0.72, 'lr': 0.001, 'time': 9, 'epochs': 6}
+{'loss': 1.3771463945176867, 'accuracy': 0.58666664, 'val_loss': 1.7696118354797363, 'val_accuracy': 0.63, 'lr': 0.001, 'time': 6, 'epochs': 6}
+{'loss': 1.3432307481765746, 'accuracy': 0.6377778, 'val_loss': 1.6336936950683594, 'val_accuracy': 0.73, 'lr': 0.001, 'time': 7, 'epochs': 7}
+{'loss': 1.272678459485372, 'accuracy': 0.62222224, 'val_loss': 1.8071383237838745, 'val_accuracy': 0.54, 'lr': 0.001, 'time': 6, 'epochs': 6}
+------------------------------
+Completed | grapheme_root | {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64}
+{'loss': 4.626896671719021, 'accuracy': 0.034444444, 'val_loss': 4.83476448059082, 'val_accuracy': 0.04, 'lr': 0.001, 'time': 212, 'epochs': 209}
+{'loss': 4.68101375579834, 'accuracy': 0.03, 'val_loss': 4.769676685333252, 'val_accuracy': 0.03, 'lr': 0.001, 'time': 48, 'epochs': 47}
+{'loss': 4.737969924079048, 'accuracy': 0.026666667, 'val_loss': 4.7071332931518555, 'val_accuracy': 0.01, 'lr': 0.001, 'time': 36, 'epochs': 35}
+{'loss': 4.695657562679715, 'accuracy': 0.03, 'val_loss': 4.62410831451416, 'val_accuracy': 0.01, 'lr': 0.001, 'time': 44, 'epochs': 43}
+------------------------------
+Completed | vowel_diacritic | {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64}
+{'loss': 2.2567323854234482, 'accuracy': 0.17222223, 'val_loss': 2.346750259399414, 'val_accuracy': 0.12, 'lr': 0.001, 'time': 10, 'epochs': 10}
+{'loss': 2.227264952659607, 'accuracy': 0.18444444, 'val_loss': 2.29365611076355, 'val_accuracy': 0.25, 'lr': 0.001, 'time': 6, 'epochs': 6}
+{'loss': 2.1881378099653457, 'accuracy': 0.18555556, 'val_loss': 2.3219728469848633, 'val_accuracy': 0.17, 'lr': 0.001, 'time': 4, 'epochs': 4}
+{'loss': 2.195400916205512, 'accuracy': 0.20444444, 'val_loss': 2.2602269649505615, 'val_accuracy': 0.26, 'lr': 0.001, 'time': 5, 'epochs': 5}
+------------------------------
