@@ -135,8 +135,8 @@ if __name__ == '__main__':
     else:
         dirs = {
             "data":        "./input/bengaliai-cv19",
-            "models":      "./output/models/simple_triple_df_cnn",
-            "predictions": "./output/predictions/simple_triple_df_cnn",
+            "models":      "./data_output/models/simple_triple_df_cnn",
+            "predictions": "./data_output/predictions/simple_triple_df_cnn",
             "logs":        "./logs",
         }
     for dirname in dirs.values(): os.makedirs(dirname, exist_ok=True)
