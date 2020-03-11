@@ -1,0 +1,16 @@
+------------------------------
+Completed | consonant_diacritic
+model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'patience': 5, 'fraction': 1.0, 'loops': 1}
+{'loss': 0.20578442121900617, 'accuracy': 0.93308103, 'val_loss': 0.3212090076215, 'val_accuracy': 0.9118701, 'lr': 0.001, 'time': 745, 'epochs': 15}
+------------------------------
+Completed | grapheme_root
+model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'patience': 5, 'fraction': 1.0, 'loops': 1}
+{'loss': 1.8084931050465654, 'accuracy': 0.50789183, 'val_loss': 1.6060389639300385, 'val_accuracy': 0.57010555, 'lr': 0.001, 'time': 903, 'epochs': 18}
+------------------------------
+Completed | vowel_diacritic
+model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'patience': 5, 'fraction': 1.0, 'loops': 1}
+{'loss': 0.4222958355910558, 'accuracy': 0.8616809, 'val_loss': 0.5210648229387599, 'val_accuracy': 0.83638716, 'lr': 0.001, 'time': 559, 'epochs': 11}
+------------------------------

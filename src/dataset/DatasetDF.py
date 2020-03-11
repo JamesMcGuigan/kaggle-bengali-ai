@@ -1,74 +1,74 @@
-import gc
-from typing import List, AnyStr, Dict, Tuple
+import os
+from typing import AnyStr, Dict, List, Union
 
 import glob2
+import numpy as np
 import pandas as pd
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
 
 class DatasetDF():
     def __init__(self,
-                 split: float=0.1,
-                 # apply_X: List[Callable]=[],
-                 # apply_Y: List[Callable]=[],
-                 data_dir='./input/bengaliai-cv19',
-                 image_shape=(137,236),
-                 data_id=0,
-                 Y_field=None,
-    ):
-        self.image_shape: Tuple = image_shape
+                 test_train   = 'train',
+                 data_id: Union[str,int] = '0',
+                 fraction     = 1,
+                 Y_field      = None,
+                 shuffle      = True,
+                 split: float = 0.1,
+                 data_dir     = './input/bengaliai-cv19',
+        ):
+        self.test_train = test_train
+        self.data_id    = data_id
+        self.Y_field    = Y_field
+        self.split      = split    if self.test_train is 'train' else 0
+        self.shuffle    = shuffle  if self.test_train is 'train' else False
+        self.fraction   = fraction if self.test_train is 'train' else 1
 
-        self.csv_filename = f'{data_dir}/train.csv'
-        self.csv_data     = pd.read_csv(self.csv_filename).set_index('image_id', drop=True).astype('category')
-        self.csv_data['grapheme'] = self.csv_data['grapheme'].cat.codes
+        self.csv_filename         = f'{data_dir}/train.csv'
+        self.csv_data             = pd.read_csv(self.csv_filename).set_index('image_id', drop=True).astype('category')
+        self.csv_data['grapheme'] = self.csv_data['grapheme'].cat.codes.astype('category')
 
-        # There is very little test data, and the csv data is in a different format, so split twice
-        self.image_filenames: Dict[AnyStr, List[AnyStr]] = {
-            "train": sorted(glob2.glob(f'{data_dir}/train_image_data_{data_id}.parquet')),
-            "test":  sorted(glob2.glob(f'{data_dir}/test_image_data_*.parquet')),  # Test dataset is very small
-        }
-        self.raw_images: Dict[AnyStr, DataFrame] = {
-            key: pd.concat([pd.read_parquet(file) for file in self.image_filenames[key]])  #.iloc[0:1000]
-                 if len(self.image_filenames[key]) else pd.DataFrame()
-            for key in self.image_filenames.keys()
-        }
-        self.raw_images['train'], self.raw_images['valid'] = train_test_split(self.raw_images['train'], test_size=split, random_state=0)
+        self.image_filenames = sorted(glob2.glob(f'{data_dir}/{test_train}_image_data_{data_id}.parquet'))
 
-        self.X: Dict[AnyStr, Series] = {}
-        self.Y: Dict[AnyStr, Series] = {}
-        for key in reversed(['train','valid','test']):
-            # noinspection PyArgumentList
-            self.X[key] = (
-                self.raw_images[key]
-                    .drop(columns='image_id', errors='ignore')
-                    .values.astype('uint8')
-                    .reshape(-1, *self.image_shape, 1)
-            )
-            # if 'image_id' in self.raw_images[key].columns:
-            if key != 'test':
-                labels = self.raw_images[key]['image_id'].values
-                self.Y[key] = self.csv_data.loc[labels]
-                if Y_field:
-                    self.Y[key] = self.Y[key][Y_field]
+        X = { "train": [], "valid": [] }
+        Y = { "train": [], "valid": [] }
+        for filename in self.image_filenames:
+            train, valid = pd.read_parquet(filename), pd.DataFrame()
+            if self.fraction < 1:
+                train, discard = train_test_split(train, train_size=self.fraction, shuffle=self.shuffle, random_state=0)
+            if self.split != 0:
+                train, valid   = train_test_split(train, test_size=self.split,     shuffle=self.shuffle, random_state=0)
 
-                self.Y[key] = pd.get_dummies( self.Y[key] )  # `categorical_crossentropy` expects targets to be binary matrices (1s and 0s) of shape
-                # to_categorical( self.Y[key].values )
-            else:
-                self.Y[key] = None
+            X['train'].append( self.transform_X(train) )
+            X['valid'].append( self.transform_X(valid) )
+            Y['train'].append( self.transform_Y(train) )
+            Y['valid'].append( self.transform_Y(valid) )
 
-            del self.raw_images[key]; gc.collect()  # Free up memory
+        self.X: Dict[AnyStr, np.ndarray] = { key: np.concatenate(X[key]) for key in X.keys() }
+        self.Y: Dict[AnyStr, np.ndarray] = { key: np.concatenate(Y[key]) for key in Y.keys() }
 
-        # for function in apply_X:
-        #     for key in self.X:
-        #         self.X[key] = self.X[key].apply(function)
-        #
-        # for function in apply_Y:
-        #     for key in self.Y:
-        #         self.X[key] = self.X[key].apply(function)
 
-    def epoc_size(self):
-        return self.X['train'].shape[0]
+    # noinspection PyArgumentList
+    def transform_X(self, df: DataFrame) -> np.ndarray:
+        output = (
+            df.drop(columns='image_id', errors='ignore')
+              .values.astype('uint8')
+              .reshape(-1, 137, 236, 1)
+        )
+        return output
+
+
+    def transform_Y(self, df: DataFrame) -> Union[DataFrame,List]:
+        if self.test_train == 'test': return []
+
+        labels = df['image_id'].values
+        output = self.csv_data.loc[labels]
+        if self.Y_field:
+            output = output[self.Y_field]
+        output = pd.get_dummies( output )  # `categorical_crossentropy` expects targets to be binary matrices (1s and 0s) of shape
+        return output
+
 
     def input_shape(self):
         return self.X['train'].shape[1:]
@@ -76,13 +76,18 @@ class DatasetDF():
     def output_shape(self):
         return self.Y['train'].shape[-1]
 
+    def epoch_size(self):
+        return self.X['train'].shape[0]
 
-if __name__ == '__main__':
+
+if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
     # NOTE: loading all datasets exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
     for data_id in range(0,4):
-        dataset = DatasetDF(data_id=data_id)
-        print(f"{data_id} dataset.image_filenames", dataset.image_filenames)
-        print(f"{data_id} dataset.raw_images",      { key: df.shape for key, df in dataset.raw_images.items()})
-        print(f"{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items()         })
-        print(f"{data_id} dataset.Y",               { key: df.shape for key, df in dataset.Y.items()         })
-        print(f"{data_id} dataset.image_shape", dataset.image_shape)
+        for test_train in ['test', 'train']:
+            dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
+            print(f"{test_train}:{data_id} dataset.image_filenames", dataset.image_filenames)
+            print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
+            print(f"{test_train}:{data_id} dataset.Y",               { key: df.shape for key, df in dataset.Y.items() })
+            print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
+            print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
+            print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())

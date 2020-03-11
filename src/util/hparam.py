@@ -4,7 +4,6 @@ import time
 from typing import Dict, AnyStr
 
 import tensorflow as tf
-# from tensorboard.plugins.hparams.api import KerasCallback  # BUG: AttributeError: module 'tensorflow' has no attribute 'keras'
 from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
     ModelCheckpoint
@@ -64,7 +63,7 @@ def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
 
         return CyclicLR(
             mode      = mode,
-            step_size = dataset.epoc_size() * (hparams['patience'] / (2.0 * whole_cycles)),
+            step_size =dataset.epoch_size() * (hparams['patience'] / (2.0 * whole_cycles)),
             base_lr   = min_lr(hparams),
             max_lr    = hparams['learning_rate']
         )
@@ -78,7 +77,7 @@ def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
             monitor  = 'val_loss',
             factor   = 1 / factor,
             patience = math.floor(patience),
-            min_lr   = 0,   # min_lr(hparams),
+            min_lr   = 0,   # min_lr(train_hparams),
             verbose  = verbose,
         )
 
@@ -91,6 +90,7 @@ def model_compile_fit(
         dataset: DatasetDF,
         model_file: AnyStr = None,
         log_dir: AnyStr = None,
+        best_only=True,
         verbose = False,
 ):
     hparams   = { **hparam_defaults, **hparams }
@@ -103,7 +103,7 @@ def model_compile_fit(
             mode='min',
             verbose=verbose,
             patience=hparams.get('patience', hparams['patience']),
-            restore_best_weights=True
+            restore_best_weights=best_only
         ),
         schedule,
         # ProgbarLogger(count_mode='samples', stateful_metrics=None)
@@ -114,7 +114,7 @@ def model_compile_fit(
                 model_file,
                 monitor='val_loss',
                 verbose=False,
-                save_best_only=True,
+                save_best_only=best_only,
                 save_weights_only=False,
                 mode='auto',
             )
@@ -122,7 +122,7 @@ def model_compile_fit(
     if log_dir:
         callbacks += [  
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
-            KerasCallback(log_dir, hparams)                                     # log hparams
+            KerasCallback(log_dir, hparams)                                     # log train_hparams
         ]
 
     timer_start = time.time()
@@ -141,7 +141,8 @@ def model_compile_fit(
     )
     timer_seconds = int(time.time() - timer_start)
 
-    model_stats           = { key: value[-1] for key, value in history.history.items() }
+    best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+    model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
     model_stats['time']   = timer_seconds
     model_stats['epochs'] = len(history.history['loss'])
 
