@@ -69,6 +69,7 @@ def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
                     Y_field=output_field,
                     split=train_hparams['split'],
                     fraction=train_hparams['fraction'],
+                    data_dir=dirs['data'],
                 )
 
                 stats = model_compile_fit(
@@ -165,9 +166,9 @@ if __name__ == '__main__':
         "min_lr":        0.001,
         "split":         0.2,
         "batch_size":    128,
-        "patience":      5,
+        "patience":      10,
         "fraction":      1.0,
-        "loops":         1,
+        "loops":         2,
     }
     argparse_from_dicts([ dirs, hparams, model_hparams  ])
 
