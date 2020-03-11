@@ -7,6 +7,8 @@ import pandas as pd
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
 
+from src.settings import settings
+
 
 class DatasetDF():
     def __init__(self,
@@ -16,7 +18,6 @@ class DatasetDF():
                  Y_field      = None,
                  shuffle      = True,
                  split: float = 0.1,
-                 data_dir     = './input/bengaliai-cv19',
         ):
         self.test_train = test_train
         self.data_id    = data_id
@@ -25,11 +26,11 @@ class DatasetDF():
         self.shuffle    = shuffle  if self.test_train is 'train' else False
         self.fraction   = fraction if self.test_train is 'train' else 1
 
-        self.csv_filename         = f'{data_dir}/train.csv'
+        self.csv_filename         = f"{settings['dir']['data']}/train.csv"
         self.csv_data             = pd.read_csv(self.csv_filename).set_index('image_id', drop=True).astype('category')
         self.csv_data['grapheme'] = self.csv_data['grapheme'].cat.codes.astype('category')
 
-        self.image_filenames = sorted(glob2.glob(f'{data_dir}/{test_train}_image_data_{data_id}.parquet'))
+        self.image_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
 
         X = { "train": [], "valid": [] }
         Y = { "train": [], "valid": [] }

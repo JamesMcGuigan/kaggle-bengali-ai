@@ -9,22 +9,15 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler,
     ModelCheckpoint
 
 from src.dataset.DatasetDF import DatasetDF
+from src.settings import settings
 from vendor.CLR.clr_callback import CyclicLR
 
-hparam_defaults = {
-    "optimizer":     "Adagrad",
-    "scheduler":     "plateau2",
-    "learning_rate": 0.1,
-    "min_lr":        0.001,
-    "batch_size":    128,
-    "patience":      10
-}
 
 def min_lr(hparams):
     # tensorboard --logdir logs/convergence_search/min_lr-optimized_scheduler-random-scheduler/ --reload_multifile=true
     # There is a high degree of randomness in this parameter, so it is hard to distinguish from statistical noise
     # Lower min_lr values for CycleCR tend to train slower
-    hparams = { **hparam_defaults, **hparams }
+    hparams = { **settings['hparam_defaults'], **hparams }
     if 'min_lr'  in hparams:              return hparams['min_lr']
     if hparams["optimizer"] == "SGD":     return 1e05  # preferred by SGD
     else:                                 return 1e03  # fastest, least overfitting and most accidental high-scores
@@ -32,7 +25,7 @@ def min_lr(hparams):
 
 # DOCS: https://ruder.io/optimizing-gradient-descent/index.html
 def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
-    hparams = { **hparam_defaults, **hparams }
+    hparams = { **settings['hparam_defaults'], **hparams }
     if hparams['scheduler'] is 'constant':
         return LearningRateScheduler(lambda epocs: hparams['learning_rate'], verbose=False)
 
@@ -85,15 +78,15 @@ def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
 
 
 def model_compile_fit(
-        hparams: Dict,
-        model:   tf.keras.models.Model,
-        dataset: DatasetDF,
+        hparams:    Dict,
+        model:      tf.keras.models.Model,
+        dataset:    DatasetDF,
         model_file: AnyStr = None,
-        log_dir: AnyStr = None,
-        best_only=True,
-        verbose = False,
+        log_dir:    AnyStr = None,
+        best_only   = True,
+        verbose     = settings['verbose']['fit'],
 ):
-    hparams   = { **hparam_defaults, **hparams }
+    hparams   = { **settings['hparam_defaults'], **hparams }
     optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
     schedule  = scheduler(hparams, dataset, verbose=verbose)
 

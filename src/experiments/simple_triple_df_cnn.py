@@ -12,7 +12,7 @@ from src.models.SingleOutputCNN import SingleOutputCNN
 from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv
 from src.util.hparam import model_compile_fit
-
+from src.settings import settings
 
 # https://stackoverflow.com/questions/36927607/how-can-i-solve-ran-out-of-gpu-memory-in-tensorflow
 config  = tf.compat.v1.ConfigProto()
@@ -21,20 +21,22 @@ session = tf.compat.v1.Session(config=config)
 
 
 
-def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
+def simple_triple_df_cnn(train_hparams, model_hparams):
     model_hparams_key = "-".join( f"{key}={value}" for key,value in model_hparams.items() ).replace(' ','')
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
 
 
-    csv_data    = pd.read_csv(f"{dirs['data']}/train.csv")
+    csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
     models      = {}
     model_files = {}
     model_stats = {}
     output_fields = [ "consonant_diacritic", "grapheme_root", "vowel_diacritic" ]
     for output_field in output_fields:
         model_stats[output_field] = []
-        model_files[output_field] = f"{dirs['models']}/SingleOutputCNN-{model_hparams_key}-{output_field}.hdf5"
+        model_files[output_field] = f"{settings['dir']['models']}/simple_triple_df_cnn/SingleOutputCNN-{model_hparams_key}-{output_field}.hdf5"
+        os.makedirs(os.path.dirname(model_files[output_field]), exist_ok=True)
+
 
     for output_field in output_fields:
         # # Release GPU memory
@@ -55,8 +57,8 @@ def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
 
         models[output_field].summary()
 
-        for loop in range(1):
-            for data_id in range(0,1):
+        for loop in range(train_hparams['loops']):
+            for data_id in range(0,4):
                 print("------------------------------")
                 print(f"Training | {output_field} | data_id: {data_id}")
                 print(f"model_hparams: {model_hparams}")
@@ -69,7 +71,6 @@ def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
                     Y_field=output_field,
                     split=train_hparams['split'],
                     fraction=train_hparams['fraction'],
-                    data_dir=dirs['data'],
                 )
 
                 stats = model_compile_fit(
@@ -77,8 +78,7 @@ def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
                     model      = models[output_field],
                     dataset    = dataset,
                     model_file = model_files[output_field],
-                    log_dir    = f"{dirs['logs']}/simple_triple_df_cnn/{output_field}/",
-                    verbose    = os.environ.get('KAGGLE_KERNEL_RUN_TYPE') != 'Batch',
+                    log_dir    = f"{settings['dir']['logs']}/simple_triple_df_cnn/{output_field}/",
                     best_only  = True,
                 )
                 model_stats[output_field].append(stats)
@@ -92,7 +92,7 @@ def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
 
 
     ### Log Stats Results
-    logfilename = f"{dirs['predictions']}/SingleOutputCNN-{model_hparams_key}-submission.log"
+    logfilename = f"{settings['dir']['submissions']}/SingleOutputCNN-{model_hparams_key}-submission.log"
     with open(logfilename, 'w') as file:
         output = []
         output.append("------------------------------")
@@ -119,28 +119,12 @@ def simple_triple_df_cnn(dirs, train_hparams, model_hparams):
 
     df_to_submission_csv(
         predictions,
-        f"{dirs['predictions']}/SingleOutputCNN-{model_hparams_key}-submission.csv"
+        f"{settings['dir']['submissions']}/SingleOutputCNN-{model_hparams_key}-submission.csv"
     )
 
 
 
 if __name__ == '__main__':
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        dirs = {
-            "data":        "../input/bengaliai-cv19",
-            "models":      "./",
-            "predictions": "./",
-            "logs":        "./logs",
-        }
-    else:
-        dirs = {
-            "data":        "./input/bengaliai-cv19",
-            "models":      "./data_output/models/simple_triple_df_cnn",
-            "predictions": "./data_output/predictions/simple_triple_df_cnn",
-            "logs":        "./logs",
-        }
-    for dirname in dirs.values(): os.makedirs(dirname, exist_ok=True)
-
     # model_hparams = {
     #     "cnns_per_maxpool": 2,
     #     "maxpool_layers":   6,
@@ -156,20 +140,22 @@ if __name__ == '__main__':
         "regularization": False,
         "global_maxpool": False,
     }
-    hparams = {
-        # "optimizer":     "Adagrad",
-        # "scheduler":     "plateau2",
-        # "learning_rate": 0.1,
+    train_hparams = {
         "optimizer":     "RMSprop",
         "scheduler":     "constant",
         "learning_rate": 0.001,
-        "min_lr":        0.001,
-        "split":         0.2,
-        "batch_size":    128,
-        "patience":      10,
-        "fraction":      1.0,
+        # "min_lr":        0.001,
+        # "split":         0.2,
+        # "batch_size":    128,
+        # "patience":      10,
+        # "fraction":      1.0,
         "loops":         2,
     }
-    argparse_from_dicts([ dirs, hparams, model_hparams  ])
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
+        train_hparams['patience'] = 0
+        train_hparams['loops']    = 1
 
-    simple_triple_df_cnn(dirs, hparams, model_hparams)
+    train_hparams = { **settings['hparam_defaults'], **train_hparams }
+    argparse_from_dicts([train_hparams, model_hparams])
+
+    simple_triple_df_cnn(train_hparams, model_hparams)
