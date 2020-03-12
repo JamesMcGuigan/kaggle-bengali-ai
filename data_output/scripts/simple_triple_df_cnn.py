@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
-
-##### 2020-03-12 00:20:29+00:00
+##### 
+##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
+##### 
+##### 2020-03-12 13:10:03+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 92c15c2 kaggle_compile.py | write script to compile Kaggle Kernels for upload
+##### * master 5b7ed17 settings.py | add settings['verbose']['tensorboard'] + set defaults for: patience + loops
 ##### 
-##### 92c15c2dec83f9d1dab95a60109b0f4aa08b9e66
+##### 5b7ed17eb96d44c2d513d646469395fc14bca127
 ##### 
+##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
 
 #####
 ##### START src/settings.py
@@ -26,15 +29,31 @@ settings['hparam_defaults'] = {
     "min_lr":        0.001,
     "split":         0.2,
     "batch_size":    128,
-    "patience":      10,
     "fraction":      1.0,
-    "loops":         2,
+    "patience": {
+        'Localhost':    5,
+        'Interactive':  0,
+        'Batch':       10,
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+    "loops": {
+        'Localhost':   1,
+        'Interactive': 1,
+        'Batch':       2,
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 }
+
 settings['verbose'] = {
+    "tensorboard": {
+        {
+            'Localhost':   True,
+            'Interactive': False,
+            'Batch':       False,
+        }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
+    },
     "fit": {
         'Localhost':   1,
         'Interactive': 2,
-        'Batch':       0,
+        'Batch':       2,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
 }
 
@@ -546,7 +565,7 @@ def model_compile_fit(
                 mode='auto',
             )
         ]
-    if log_dir:
+    if log_dir and settings['verbose']['tensorboard']:
         callbacks += [  
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
             KerasCallback(log_dir, hparams)                                     # log train_hparams
@@ -735,7 +754,7 @@ if __name__ == '__main__':
         # "batch_size":    128,
         # "patience":      10,
         # "fraction":      1.0,
-        "loops":         2,
+        # "loops":         2,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -750,13 +769,16 @@ if __name__ == '__main__':
 ##### END   src/experiments/simple_triple_df_cnn.py
 #####
 
-
-##### 2020-03-12 00:20:29+00:00
+##### 
+##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
+##### 
+##### 2020-03-12 13:10:03+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 92c15c2 kaggle_compile.py | write script to compile Kaggle Kernels for upload
+##### * master 5b7ed17 settings.py | add settings['verbose']['tensorboard'] + set defaults for: patience + loops
 ##### 
-##### 92c15c2dec83f9d1dab95a60109b0f4aa08b9e66
+##### 5b7ed17eb96d44c2d513d646469395fc14bca127
 ##### 
+##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py

@@ -78,26 +78,42 @@ def make_executable(path):
     os.chmod(path, mode)
 
 
+def savefile():
+    savefile = os.path.join( args.output_dir, os.path.basename(args.files[-1]) )  # Assume last provided filename
+    return savefile
+
+
 def compile_script(filelist: List[str]) -> str:
     filelist = unique(filelist)
-    gitinfo = [
-        subprocess.check_output('date --rfc-3339 seconds',     shell=True),
-        subprocess.check_output('git remote -v',               shell=True),
-        subprocess.check_output('git branch -v ',              shell=True),
-        subprocess.check_output('git rev-parse --verify HEAD', shell=True),
+
+
+    shebang = "#!/usr/bin/env python3"
+    header = [
+        ("\n" + (" ".join(sys.argv)) + "\n"),
+        subprocess.check_output('date --rfc-3339 seconds',     shell=True).decode("utf-8"),
+        subprocess.check_output('git remote -v',               shell=True).decode("utf-8"),
+        subprocess.check_output('git branch -v ',              shell=True).decode("utf-8"),
+        subprocess.check_output('git rev-parse --verify HEAD', shell=True).decode("utf-8"),
     ]
-    gitinfo = "".join(map(lambda string: re.sub('^|\n+', '\n##### ', string.decode("utf-8"), re.MULTILINE), gitinfo))
+    if args.save: header += [ f'Wrote: {savefile()}' ]
 
-    codes = ["#!/usr/bin/env python3"]
-    codes.append(gitinfo)
+    header = map(lambda string: string.split("\n"), header )
+    header = map(lambda string: '##### ' + string, flatten(header))
+    header = "\n".join(flatten(header))
+
+    output_lines = [
+        shebang,
+        header,
+    ]
     for filename in filelist:
-        codes.append( f'#####\n##### START {filename}\n#####' )
-        codes.append( read_and_comment_file(filename) )
-        codes.append( f'#####\n##### END   {filename}\n#####' )
-    codes.append(gitinfo)
-
-    return "\n\n".join(codes)
-
+        output_lines += [
+            f'#####\n##### START {filename}\n#####',
+            read_and_comment_file(filename),
+            f'#####\n##### END   {filename}\n#####',
+        ]
+    output_lines += [ header ]
+    output_text   = "\n\n".join(output_lines)
+    return output_text
 
 
 
@@ -106,7 +122,5 @@ if __name__ == '__main__':
     code      = compile_script(filenames)
     print(code)
     if args.save:
-        savefile = os.path.join( args.output_dir, os.path.basename(args.files[-1]) )  # Assume last provided filename
-        open(savefile, 'w').write(code)
-        make_executable(savefile)
-        print('##### Wrote:', savefile, file=sys.stderr)
+        open(savefile(), 'w').write(code)
+        make_executable(savefile())
