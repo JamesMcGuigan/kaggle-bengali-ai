@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
-##### 2020-03-12 00:05:00+00:00
+
+##### 2020-03-12 00:20:29+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master dd79c12 [ahead 2] settings.py | as required by https://www.kaggle.com/WinningModelDocumentationGuidelines
+##### * master 92c15c2 kaggle_compile.py | write script to compile Kaggle Kernels for upload
 ##### 
-##### dd79c12fb75385aa874769c04ae5628a275ac0de
+##### 92c15c2dec83f9d1dab95a60109b0f4aa08b9e66
 ##### 
+
 #####
 ##### START src/settings.py
 #####
+
 # DOCS: https://www.kaggle.com/WinningModelDocumentationGuidelines
 import os
 
@@ -52,12 +55,15 @@ else:
 for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
 
+
 #####
 ##### END   src/settings.py
 #####
+
 #####
 ##### START src/dataset/DatasetDF.py
 #####
+
 import os
 from typing import List, Union
 
@@ -65,6 +71,8 @@ import glob2
 import numpy as np
 from pandas import DataFrame
 from sklearn.model_selection import train_test_split
+
+# from src.settings import settings
 
 
 class DatasetDF():
@@ -150,12 +158,15 @@ if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
             print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
             print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
 
+
 #####
 ##### END   src/dataset/DatasetDF.py
 #####
+
 #####
 ##### START vendor/CLR/clr_callback.py
 #####
+
 from tensorflow.keras.callbacks import *
 import tensorflow.keras.backend as K
 
@@ -168,11 +179,11 @@ class CyclicLR(Callback):
     per-cycle basis.
     This class has three built-in policies, as put forth in the paper.
     "triangular":
-        filelist basic triangular cycle w/ no amplitude scaling.
+        A basic triangular cycle w/ no amplitude scaling.
     "triangular2":
-        filelist basic triangular cycle that scales initial amplitude by half each cycle.
+        A basic triangular cycle that scales initial amplitude by half each cycle.
     "exp_range":
-        filelist cycle that scales initial amplitude by gamma**(cycle iterations) at each
+        A cycle that scales initial amplitude by gamma**(cycle iterations) at each 
         cycle iteration.
     For more detail, please see paper.
     
@@ -290,12 +301,15 @@ class CyclicLR(Callback):
         
         K.set_value(self.model.optimizer.lr, self.clr())
 
+
 #####
 ##### END   vendor/CLR/clr_callback.py
 #####
+
 #####
 ##### START src/models/SingleOutputCNN.py
 #####
+
 import inspect
 import types
 from typing import cast
@@ -353,12 +367,15 @@ def SingleOutputCNN(
     # plot_model(model, to_file=os.path.join(os.path.dirname(__file__), f"{name}.png"))
     return model
 
+
 #####
 ##### END   src/models/SingleOutputCNN.py
 #####
+
 #####
 ##### START src/util/argparse.py
 #####
+
 import argparse
 from typing import List, Dict
 
@@ -374,9 +391,11 @@ def argparse_from_dicts(configs: List[Dict]):
         for key, value in config.items():
             config[key] = getattr(args, key)
 
+
 #####
 ##### END   src/util/argparse.py
 #####
+
 #####
 ##### START src/util/csv.py
 #####
@@ -404,12 +423,15 @@ def df_to_submission_csv(df: DataFrame, filename: str):
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
+
 #####
 ##### END   src/util/csv.py
 #####
+
 #####
 ##### START src/util/hparam.py
 #####
+
 import math
 import re
 import time
@@ -420,9 +442,9 @@ from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
     ModelCheckpoint
 
-from src.dataset.DatasetDF import DatasetDF
-from src.settings import settings
-from vendor.CLR.clr_callback import CyclicLR
+# from src.dataset.DatasetDF import DatasetDF
+# from src.settings import settings
+# from vendor.CLR.clr_callback import CyclicLR
 
 
 def min_lr(hparams):
@@ -553,12 +575,15 @@ def model_compile_fit(
 
     return model_stats
 
+
 #####
 ##### END   src/util/hparam.py
 #####
+
 #####
 ##### START src/experiments/simple_triple_df_cnn.py
 #####
+
 # This is a first pass, simplest thing that could possibly work attempt
 # We train three separate MINST style CNNs for each label, then combine the results
 import os
@@ -568,12 +593,12 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 
-from src.dataset.DatasetDF import DatasetDF
-from src.models.SingleOutputCNN import SingleOutputCNN
-from src.util.argparse import argparse_from_dicts
-from src.util.csv import df_to_submission_csv
-from src.util.hparam import model_compile_fit
-from src.settings import settings
+# from src.dataset.DatasetDF import DatasetDF
+# from src.models.SingleOutputCNN import SingleOutputCNN
+# from src.util.argparse import argparse_from_dicts
+# from src.util.csv import df_to_submission_csv
+# from src.util.hparam import model_compile_fit
+# from src.settings import settings
 
 # https://stackoverflow.com/questions/36927607/how-can-i-solve-ran-out-of-gpu-memory-in-tensorflow
 config  = tf.compat.v1.ConfigProto()
@@ -720,16 +745,18 @@ if __name__ == '__main__':
     argparse_from_dicts([train_hparams, model_hparams])
 
     simple_triple_df_cnn(train_hparams, model_hparams)
+
 #####
 ##### END   src/experiments/simple_triple_df_cnn.py
 #####
 
-##### 2020-03-12 00:05:00+00:00
+
+##### 2020-03-12 00:20:29+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master dd79c12 [ahead 2] settings.py | as required by https://www.kaggle.com/WinningModelDocumentationGuidelines
+##### * master 92c15c2 kaggle_compile.py | write script to compile Kaggle Kernels for upload
 ##### 
-##### dd79c12fb75385aa874769c04ae5628a275ac0de
+##### 92c15c2dec83f9d1dab95a60109b0f4aa08b9e66
 ##### 

@@ -23,18 +23,18 @@ module_names = [ name for name in os.listdir(args.python_path)
                  if os.path.isdir(os.path.join(args.python_path, name))
                  and not name.startswith('.') ]
 module_regex = '(?:' + "|".join(map(re.escape, module_names)) + ')'
-import_regex = f'^from\s+({module_regex}.*?)\s+import'
+import_regex = re.compile(f'^from\s+({module_regex}.*?)\s+import', re.MULTILINE)
 
 
 def read_and_comment_file(filename: str) -> str:
     code = open(filename, 'r').read()
-    code = re.sub(import_regex, r'# \0', code, re.M)
+    code = re.sub(import_regex, r'# \g<0>', code)
     return code
 
 
 def extract_dependencies_from_file(filename: str) -> List[str]:
     code    = open(filename, 'r').read()
-    imports = re.findall(import_regex, code, re.M)
+    imports = re.findall(import_regex, code)
     files   = list(map(lambda string: string.replace('.', '/')+'.py', imports))
     return files
 
@@ -96,7 +96,7 @@ def compile_script(filelist: List[str]) -> str:
         codes.append( f'#####\n##### END   {filename}\n#####' )
     codes.append(gitinfo)
 
-    return "\n".join(codes)
+    return "\n\n".join(codes)
 
 
 
