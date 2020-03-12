@@ -1,7 +1,7 @@
 # This is a first pass, simplest thing that could possibly work attempt
 # We train three separate MINST style CNNs for each label, then combine the results
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3  # Disable Tensortflow Logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 import numpy as np
 import pandas as pd
@@ -81,7 +81,10 @@ def simple_triple_df_cnn(train_hparams, model_hparams):
                     log_dir    = f"{settings['dir']['logs']}/simple_triple_df_cnn/{output_field}/",
                     best_only  = True,
                 )
+                if stats is None: break  # KaggleTimeoutCallback() triggered on_train_begin()
                 model_stats[output_field].append(stats)
+            else: continue
+            break                        # KaggleTimeoutCallback() triggered on_train_begin()
 
         print("------------------------------")
         print(f"Completed | {output_field}")

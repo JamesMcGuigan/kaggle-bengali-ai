@@ -2,6 +2,7 @@
 import os
 
 settings = {}
+
 settings['hparam_defaults'] = {
     "optimizer":     "RMSprop",
     "scheduler":     "constant",
@@ -20,6 +21,11 @@ settings['hparam_defaults'] = {
         'Interactive': 1,
         'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+    "timeout": {
+        'Localhost':   "115m",
+        'Interactive': "1m",
+        'Batch':       "115m",  # Actually 120 minutes, but give 5 minutes leeway for submission,
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
 }
 
 settings['verbose'] = {

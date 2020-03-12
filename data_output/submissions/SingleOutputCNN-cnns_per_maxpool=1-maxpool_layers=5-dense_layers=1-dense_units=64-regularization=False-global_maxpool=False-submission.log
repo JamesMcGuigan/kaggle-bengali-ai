@@ -1,13 +1,14 @@
 ------------------------------
 Completed | consonant_diacritic
 model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'patience': 0, 'fraction': 1.0, 'loops': 0}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 5, 'loops': 1, 'timeout': '1m'}
+{'loss': 0.19048876517608665, 'accuracy': 0.938085, 'val_loss': 0.7278484600612638, 'val_accuracy': 0.82383984, 'lr': 0.001, 'time': 55, 'epochs': 1}
 ------------------------------
 Completed | grapheme_root
 model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'patience': 0, 'fraction': 1.0, 'loops': 0}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 5, 'loops': 1, 'timeout': '1m'}
 ------------------------------
 Completed | vowel_diacritic
 model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'patience': 0, 'fraction': 1.0, 'loops': 0}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 5, 'loops': 1, 'timeout': '1m'}
 ------------------------------

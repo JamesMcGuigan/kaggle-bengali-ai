@@ -8,6 +8,7 @@ from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
     ModelCheckpoint
 
+from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
 from src.settings import settings
 from vendor.CLR.clr_callback import CyclicLR
@@ -99,6 +100,7 @@ def model_compile_fit(
             restore_best_weights=best_only
         ),
         schedule,
+        KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
         # ProgbarLogger(count_mode='samples', stateful_metrics=None)
     ]
     if model_file:
@@ -134,9 +136,11 @@ def model_compile_fit(
     )
     timer_seconds = int(time.time() - timer_start)
 
-    best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
-    model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
-    model_stats['time']   = timer_seconds
-    model_stats['epochs'] = len(history.history['loss'])
-
+    if 'val_loss' in history.history:
+        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
+        model_stats['time']   = timer_seconds
+        model_stats['epochs'] = len(history.history['loss'])
+    else:
+        model_stats = None
     return model_stats
