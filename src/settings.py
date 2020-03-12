@@ -18,7 +18,7 @@ settings['hparam_defaults'] = {
     "loops": {
         'Localhost':   1,
         'Interactive': 1,
-        'Batch':       2,
+        'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 }
 
