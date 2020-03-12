@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
 ##### 
-##### 2020-03-12 13:10:03+00:00
+##### 2020-03-12 13:29:24+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 5b7ed17 settings.py | add settings['verbose']['tensorboard'] + set defaults for: patience + loops
+##### * master afba5b7 settings.py | set loops=1 for KAGGLE_KERNEL_RUN_TYPE=Batch
 ##### 
-##### 5b7ed17eb96d44c2d513d646469395fc14bca127
+##### afba5b7c8be67495cdf9d18b10a6081d1771326b
 ##### 
 ##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
 
@@ -33,12 +33,12 @@ settings['hparam_defaults'] = {
     "patience": {
         'Localhost':    5,
         'Interactive':  0,
-        'Batch':       10,
+        'Batch':        5,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
     "loops": {
         'Localhost':   1,
         'Interactive': 1,
-        'Batch':       2,
+        'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 }
 
@@ -772,13 +772,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
 ##### 
-##### 2020-03-12 13:10:03+00:00
+##### 2020-03-12 13:29:24+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 5b7ed17 settings.py | add settings['verbose']['tensorboard'] + set defaults for: patience + loops
+##### * master afba5b7 settings.py | set loops=1 for KAGGLE_KERNEL_RUN_TYPE=Batch
 ##### 
-##### 5b7ed17eb96d44c2d513d646469395fc14bca127
+##### afba5b7c8be67495cdf9d18b10a6081d1771326b
 ##### 
 ##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
