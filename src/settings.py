@@ -22,9 +22,9 @@ settings['hparam_defaults'] = {
         'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
     "timeout": {
-        'Localhost':   "115m",
+        'Localhost':   "110m",
         'Interactive': "1m",
-        'Batch':       "115m",  # Actually 120 minutes, but give 5 minutes leeway for submission,
+        'Batch':       "110m",  # Timeout = 120 minutes | Submit exceeds timeout when using 115m
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
 }
 

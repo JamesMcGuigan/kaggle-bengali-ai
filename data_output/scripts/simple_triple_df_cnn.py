@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
 ##### 
-##### 2020-03-12 13:29:24+00:00
+##### 2020-03-12 19:26:12+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master afba5b7 settings.py | set loops=1 for KAGGLE_KERNEL_RUN_TYPE=Batch
+##### * master 6ad3198 [ahead 2] KaggleTimeoutCallback.py | implement 115m timeout for Kaggle
 ##### 
-##### afba5b7c8be67495cdf9d18b10a6081d1771326b
+##### 6ad3198785e4776e0e42633ffc55def28893e84c
 ##### 
 ##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
 
@@ -22,6 +22,7 @@
 import os
 
 settings = {}
+
 settings['hparam_defaults'] = {
     "optimizer":     "RMSprop",
     "scheduler":     "constant",
@@ -40,6 +41,11 @@ settings['hparam_defaults'] = {
         'Interactive': 1,
         'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+    "timeout": {
+        'Localhost':   "110m",
+        'Interactive': "1m",
+        'Batch':       "110m",  # Timeout = 120 minutes | Submit exceeds timeout when using 115m
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
 }
 
 settings['verbose'] = {
@@ -77,6 +83,85 @@ for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
 #####
 ##### END   src/settings.py
+#####
+
+#####
+##### START src/callbacks/KaggleTimeoutCallback.py
+#####
+
+import time
+from typing import Union
+
+import tensorflow as tf
+
+
+class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
+    start_python = time.time()
+
+
+    def __init__(self, timeout: Union[int, float, str], from_now=False, verbose=False):
+        super().__init__()
+        self.verbose           = verbose
+        self.from_now          = from_now
+        self.start_time        = self.start_python if not self.from_now else time.time()
+        self.timeout_seconds   = self.parse_seconds(timeout)
+
+        self.last_epoch_start  = time.time()
+        self.last_epoch_end    = time.time()
+        self.last_epoch_time   = self.last_epoch_end - self.last_epoch_start
+        self.current_runtime   = self.last_epoch_end - self.start_time
+
+
+    def on_train_begin(self, logs=None):
+        self.check_timeout()  # timeout before first epoch if model.fit() is called again
+
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.last_epoch_start = time.time()
+
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.last_epoch_end  = time.time()
+        self.last_epoch_time = self.last_epoch_end - self.last_epoch_start
+        self.check_timeout()
+
+
+    def check_timeout(self):
+        self.current_runtime = self.last_epoch_end - self.start_time
+        if self.verbose:
+            print(f'\nKaggleTimeoutCallback({self.format(self.timeout_seconds)}) runtime {self.format(self.current_runtime)}')
+
+        # Give timeout leeway of 2 * last_epoch_time
+        if (self.current_runtime + self.last_epoch_time*2) >= self.timeout_seconds:
+            print(f"\nKaggleTimeoutCallback({self.format(self.timeout_seconds)}) stopped after {self.format(self.current_runtime)}")
+            self.model.stop_training = True
+
+
+    @staticmethod
+    def parse_seconds(timeout) -> int:
+        if isinstance(timeout, (float,int)): return int(timeout)
+        seconds = 0
+        for (number, unit) in re.findall(r"(\d+(?:\.\d+)?)\s*([dhms])?", str(timeout)):
+            if   unit == 'd': seconds += float(number) * 60 * 60 * 24
+            elif unit == 'h': seconds += float(number) * 60 * 60
+            elif unit == 'm': seconds += float(number) * 60
+            else:             seconds += float(number)
+        return int(seconds)
+
+
+    @staticmethod
+    def format(seconds: Union[int,float]) -> str:
+        runtime = {
+            "d":   math.floor(seconds / (60*60*24) ),
+            "h":   math.floor(seconds / (60*60)    ) % 24,
+            "m":   math.floor(seconds / (60)       ) % 60,
+            "s":   math.floor(seconds              ) % 60,
+        }
+        return " ".join([ f"{runtime[unit]}{unit}" for unit in ["h", "m", "s"] if runtime[unit] != 0 ])
+
+
+#####
+##### END   src/callbacks/KaggleTimeoutCallback.py
 #####
 
 #####
@@ -461,6 +546,7 @@ from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
     ModelCheckpoint
 
+# from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
 # from src.settings import settings
 # from vendor.CLR.clr_callback import CyclicLR
@@ -552,6 +638,7 @@ def model_compile_fit(
             restore_best_weights=best_only
         ),
         schedule,
+        KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
         # ProgbarLogger(count_mode='samples', stateful_metrics=None)
     ]
     if model_file:
@@ -587,11 +674,13 @@ def model_compile_fit(
     )
     timer_seconds = int(time.time() - timer_start)
 
-    best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
-    model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
-    model_stats['time']   = timer_seconds
-    model_stats['epochs'] = len(history.history['loss'])
-
+    if 'val_loss' in history.history:
+        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
+        model_stats['time']   = timer_seconds
+        model_stats['epochs'] = len(history.history['loss'])
+    else:
+        model_stats = None
     return model_stats
 
 
@@ -606,7 +695,7 @@ def model_compile_fit(
 # This is a first pass, simplest thing that could possibly work attempt
 # We train three separate MINST style CNNs for each label, then combine the results
 import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3  # Disable Tensortflow Logging
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 import numpy as np
 import pandas as pd
@@ -686,7 +775,10 @@ def simple_triple_df_cnn(train_hparams, model_hparams):
                     log_dir    = f"{settings['dir']['logs']}/simple_triple_df_cnn/{output_field}/",
                     best_only  = True,
                 )
+                if stats is None: break  # KaggleTimeoutCallback() triggered on_train_begin()
                 model_stats[output_field].append(stats)
+            else: continue
+            break                        # KaggleTimeoutCallback() triggered on_train_begin()
 
         print("------------------------------")
         print(f"Completed | {output_field}")
@@ -772,13 +864,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
 ##### 
-##### 2020-03-12 13:29:24+00:00
+##### 2020-03-12 19:26:12+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master afba5b7 settings.py | set loops=1 for KAGGLE_KERNEL_RUN_TYPE=Batch
+##### * master 6ad3198 [ahead 2] KaggleTimeoutCallback.py | implement 115m timeout for Kaggle
 ##### 
-##### afba5b7c8be67495cdf9d18b10a6081d1771326b
+##### 6ad3198785e4776e0e42633ffc55def28893e84c
 ##### 
 ##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
