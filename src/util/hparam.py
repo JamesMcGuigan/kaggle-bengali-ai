@@ -112,7 +112,7 @@ def model_compile_fit(
                 mode='auto',
             )
         ]
-    if log_dir:
+    if log_dir and settings['verbose']['tensorboard']:
         callbacks += [  
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
             KerasCallback(log_dir, hparams)                                     # log train_hparams

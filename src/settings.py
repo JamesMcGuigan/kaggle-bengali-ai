@@ -9,15 +9,31 @@ settings['hparam_defaults'] = {
     "min_lr":        0.001,
     "split":         0.2,
     "batch_size":    128,
-    "patience":      10,
     "fraction":      1.0,
-    "loops":         2,
+    "patience": {
+        'Localhost':    5,
+        'Interactive':  0,
+        'Batch':       10,
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+    "loops": {
+        'Localhost':   1,
+        'Interactive': 1,
+        'Batch':       2,
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 }
+
 settings['verbose'] = {
+    "tensorboard": {
+        {
+            'Localhost':   True,
+            'Interactive': False,
+            'Batch':       False,
+        }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
+    },
     "fit": {
         'Localhost':   1,
         'Interactive': 2,
-        'Batch':       0,
+        'Batch':       2,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
 }
 
