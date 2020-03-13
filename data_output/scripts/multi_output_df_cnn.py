@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 04:09:23+00:00
+##### 2020-03-13 04:15:56+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 4086a2c [ahead 2] ./kaggle_compile.py | src/experiments/multi_output_df_cnn.py
+##### * master f46b498 [ahead 4] multi_output_df_cnn.py | add ModelCheckpoint() + Tensorboard()
 ##### 
-##### 4086a2c7192388dd362105bf3e53d2f170a95aa0
+##### f46b498563d136e3f0681b687f24679d81fd1954
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -433,7 +433,9 @@ import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow_core.python.keras.callbacks import ModelCheckpoint
 
 # from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
@@ -517,6 +519,16 @@ def multi_output_df_cnn(train_hparams, model_hparams):
                         restore_best_weights=True
                     ),
                     KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
+                    ModelCheckpoint(
+                        model_file,
+                        monitor='val_loss',
+                        verbose=False,
+                        save_best_only=True,
+                        save_weights_only=False,
+                        mode='auto',
+                    ),
+                    tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
+                    KerasCallback(log_dir, hparams),                                    # log train_hparams
                 ]
             )
             timer_seconds = int(time.time() - timer_start)
@@ -608,13 +620,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 04:09:23+00:00
+##### 2020-03-13 04:15:56+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 4086a2c [ahead 2] ./kaggle_compile.py | src/experiments/multi_output_df_cnn.py
+##### * master f46b498 [ahead 4] multi_output_df_cnn.py | add ModelCheckpoint() + Tensorboard()
 ##### 
-##### 4086a2c7192388dd362105bf3e53d2f170a95aa0
+##### f46b498563d136e3f0681b687f24679d81fd1954
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
