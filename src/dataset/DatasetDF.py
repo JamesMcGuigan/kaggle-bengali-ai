@@ -42,7 +42,7 @@ class DatasetDF():
                 'valid': None
             }
             if self.fraction < 1:
-                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle, random_state=0)
+                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
                 del discard
             if self.split != 0:
                 raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
