@@ -6,6 +6,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
 
+from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
 from src.models.MultiOutputCNN import MultiOutputCNN
 # from src.util.hparam import model_compile_fit
@@ -85,7 +86,8 @@ def multi_output_df_cnn(train_hparams, model_hparams):
                         verbose=True,
                         patience=hparams.get('patience'),
                         restore_best_weights=True
-                    )
+                    ),
+                    KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
                 ]
             )
             timer_seconds = int(time.time() - timer_start)

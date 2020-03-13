@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 04:01:28+00:00
+##### 2020-03-13 04:09:23+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 3c488d1 [ahead 1] multi_output_df_cnn.py | set epochs=999
+##### * master 4086a2c [ahead 2] ./kaggle_compile.py | src/experiments/multi_output_df_cnn.py
 ##### 
-##### 3c488d1eaab52affd591bf84289afd85d2495d3f
+##### 4086a2c7192388dd362105bf3e53d2f170a95aa0
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -86,6 +86,87 @@ for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 #####
 
 #####
+##### START src/callbacks/KaggleTimeoutCallback.py
+#####
+
+import math
+import re
+import time
+from typing import Union
+
+import tensorflow as tf
+
+
+class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
+    start_python = time.time()
+
+
+    def __init__(self, timeout: Union[int, float, str], from_now=False, verbose=False):
+        super().__init__()
+        self.verbose           = verbose
+        self.from_now          = from_now
+        self.start_time        = self.start_python if not self.from_now else time.time()
+        self.timeout_seconds   = self.parse_seconds(timeout)
+
+        self.last_epoch_start  = time.time()
+        self.last_epoch_end    = time.time()
+        self.last_epoch_time   = self.last_epoch_end - self.last_epoch_start
+        self.current_runtime   = self.last_epoch_end - self.start_time
+
+
+    def on_train_begin(self, logs=None):
+        self.check_timeout()  # timeout before first epoch if model.fit() is called again
+
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.last_epoch_start = time.time()
+
+
+    def on_epoch_end(self, epoch, logs=None):
+        self.last_epoch_end  = time.time()
+        self.last_epoch_time = self.last_epoch_end - self.last_epoch_start
+        self.check_timeout()
+
+
+    def check_timeout(self):
+        self.current_runtime = self.last_epoch_end - self.start_time
+        if self.verbose:
+            print(f'\nKaggleTimeoutCallback({self.format(self.timeout_seconds)}) runtime {self.format(self.current_runtime)}')
+
+        # Give timeout leeway of 2 * last_epoch_time
+        if (self.current_runtime + self.last_epoch_time*2) >= self.timeout_seconds:
+            print(f"\nKaggleTimeoutCallback({self.format(self.timeout_seconds)}) stopped after {self.format(self.current_runtime)}")
+            self.model.stop_training = True
+
+
+    @staticmethod
+    def parse_seconds(timeout) -> int:
+        if isinstance(timeout, (float,int)): return int(timeout)
+        seconds = 0
+        for (number, unit) in re.findall(r"(\d+(?:\.\d+)?)\s*([dhms])?", str(timeout)):
+            if   unit == 'd': seconds += float(number) * 60 * 60 * 24
+            elif unit == 'h': seconds += float(number) * 60 * 60
+            elif unit == 'm': seconds += float(number) * 60
+            else:             seconds += float(number)
+        return int(seconds)
+
+
+    @staticmethod
+    def format(seconds: Union[int,float]) -> str:
+        runtime = {
+            "d":   math.floor(seconds / (60*60*24) ),
+            "h":   math.floor(seconds / (60*60)    ) % 24,
+            "m":   math.floor(seconds / (60)       ) % 60,
+            "s":   math.floor(seconds              ) % 60,
+        }
+        return " ".join([ f"{runtime[unit]}{unit}" for unit in ["h", "m", "s"] if runtime[unit] != 0 ])
+
+
+#####
+##### END   src/callbacks/KaggleTimeoutCallback.py
+#####
+
+#####
 ##### START src/dataset/DatasetDF.py
 #####
 
@@ -95,6 +176,7 @@ from typing import AnyStr, Dict, Union
 
 import glob2
 import numpy as np
+import pandas as pd
 from pandas import DataFrame, Series
 from sklearn.model_selection import train_test_split
 
@@ -310,6 +392,8 @@ def argparse_from_dicts(configs: List[Dict]):
 ##### START src/util/csv.py
 #####
 
+import os
+
 from pandas import DataFrame
 
 
@@ -351,6 +435,7 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping
 
+# from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
 # from src.models.MultiOutputCNN import MultiOutputCNN
 # from src.util.hparam import model_compile_fit
@@ -430,7 +515,8 @@ def multi_output_df_cnn(train_hparams, model_hparams):
                         verbose=True,
                         patience=hparams.get('patience'),
                         restore_best_weights=True
-                    )
+                    ),
+                    KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
                 ]
             )
             timer_seconds = int(time.time() - timer_start)
@@ -522,13 +608,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 04:01:28+00:00
+##### 2020-03-13 04:09:23+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 3c488d1 [ahead 1] multi_output_df_cnn.py | set epochs=999
+##### * master 4086a2c [ahead 2] ./kaggle_compile.py | src/experiments/multi_output_df_cnn.py
 ##### 
-##### 3c488d1eaab52affd591bf84289afd85d2495d3f
+##### 4086a2c7192388dd362105bf3e53d2f170a95aa0
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
