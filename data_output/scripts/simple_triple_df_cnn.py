@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
 ##### 
-##### 2020-03-12 19:26:12+00:00
+##### 2020-03-13 03:39:29+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 6ad3198 [ahead 2] KaggleTimeoutCallback.py | implement 115m timeout for Kaggle
+##### * master b05fbbc [ahead 4] multi_output_df_cnn.py | initial implementation of multi output CNN + bugfixes and optimizations
 ##### 
-##### 6ad3198785e4776e0e42633ffc55def28893e84c
+##### b05fbbc2a227fe72fb2a0110d2f10a2a514be55f
 ##### 
 ##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
 
@@ -168,12 +168,13 @@ class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
 ##### START src/dataset/DatasetDF.py
 #####
 
+import gc
 import os
-from typing import List, Union
+from typing import AnyStr, Dict, Union
 
 import glob2
 import numpy as np
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from sklearn.model_selection import train_test_split
 
 # from src.settings import settings
@@ -201,44 +202,62 @@ class DatasetDF():
 
         self.image_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
 
-        X = { "train": [], "valid": [] }
-        Y = { "train": [], "valid": [] }
+        self.X:  Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
+        self.Y:  Dict[AnyStr, Union[pd.DataFrame,Dict]] = { "train": pd.DataFrame(),   "valid": pd.DataFrame()   }
+        self.ID: Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
         for filename in self.image_filenames:
-            train, valid = pd.read_parquet(filename), pd.DataFrame()
+            raw = {}
+            raw['train'], raw['valid'] = pd.read_parquet(filename), None
             if self.fraction < 1:
-                train, discard = train_test_split(train, train_size=self.fraction, shuffle=self.shuffle, random_state=0)
+                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle, random_state=0)
+                del discard
             if self.split != 0:
-                train, valid   = train_test_split(train, test_size=self.split,     shuffle=self.shuffle, random_state=0)
+                raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
+            if raw['valid'] is None:
+                raw['valid'] = pd.DataFrame(columns=raw['train'].columns)
 
-            X['train'].append( self.transform_X(train) )
-            X['valid'].append( self.transform_X(valid) )
-            Y['train'].append( self.transform_Y(train) )
-            Y['valid'].append( self.transform_Y(valid) )
+            # Attempt to save memory by doing transform_X() within the loop
+            # X can be transformed before np.concatenate, but multi-output Y must be done after pd.concat()
+            for key, value in raw.items():
+                X = self.transform_X(value)
+                if len(self.X[key]) == 0: self.X[key] = X
+                else:                     self.X[key] = np.concatenate([ self.X[key],  self.transform_X(value)  ])
+                self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]      ])
+                self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values ])
+            del X, raw; gc.collect()
 
-        self.X: Dict[AnyStr, np.ndarray] = { key: np.concatenate(X[key]) for key in X.keys() }
-        self.Y: Dict[AnyStr, np.ndarray] = { key: np.concatenate(Y[key]) for key in Y.keys() }
+        self.Y = { key: self.transform_Y(value) for key,value in self.Y.items() }
+        pass
 
 
     # noinspection PyArgumentList
     def transform_X(self, df: DataFrame) -> np.ndarray:
         output = (
             df.drop(columns='image_id', errors='ignore')
-              .values.astype('uint8')
+              .values.astype('float16')
               .reshape(-1, 137, 236, 1)
+              / 255.0                    # normalization caused localhost 16Gb RAM to be exceeded without float16
         )
         return output
 
 
-    def transform_Y(self, df: DataFrame) -> Union[DataFrame,List]:
-        if self.test_train == 'test': return []
+    def transform_Y(self, df: DataFrame) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
+        if self.test_train == 'test': return pd.DataFrame()
 
         labels = df['image_id'].values
-        output = self.csv_data.loc[labels]
-        if self.Y_field:
-            output = output[self.Y_field]
-        output = pd.get_dummies( output )  # `categorical_crossentropy` expects targets to be binary matrices (1s and 0s) of shape
-        return output
+        output_df = self.csv_data.drop(columns='image_id', errors='ignore').loc[labels]
+        output_df = output_df[self.Y_field] if self.Y_field else output_df
 
+        if isinstance(output_df, Series) or len(output_df.columns) == 1:
+            # single model output
+            output = pd.get_dummies( output_df )
+        else:
+            # multi model output
+            output = {
+                column: pd.get_dummies( output_df[column] )
+                for column in output_df.columns
+            }
+        return output
 
     def input_shape(self):
         return self.X['train'].shape[1:]
@@ -512,9 +531,10 @@ def df_to_submission(df: DataFrame) -> DataFrame:
     submission = DataFrame(columns=['row_id', 'target'])
     for index, row in df.iterrows():
         for output_field in output_fields:
+            index = f"Test_{index}" if not str(index).startswith('T') else index
             submission = submission.append({
-                'row_id': f"Test_{index}_{output_field}",
-                'target': df[output_field].iloc[index],
+                'row_id': f"{index}_{output_field}",
+                'target': df[output_field].loc[index],
             }, ignore_index=True)
     return submission
 
@@ -806,16 +826,20 @@ def simple_triple_df_cnn(train_hparams, model_hparams):
 
 
     ### Output Predictions to CSV
-    test_dataset = DatasetDF(test_train='test', data_id='*')  # contains all test data
-    predictions  = pd.DataFrame()
-    for output_field in output_fields:
-        prediction = models[output_field].predict(test_dataset.X['train'])
-        prediction = np.argmax( prediction, axis=-1 )
-        predictions[output_field] = prediction
-
+    ### Loop over data_id because submission test data is large: Submission Error: Notebook Exceeded Allowed Compute
+    submission = pd.DataFrame()
+    for data_id in range(0,4):
+        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # contains all test data
+        predictions  = pd.DataFrame()
+        for output_field in output_fields:
+            prediction = models[output_field].predict(test_dataset.X['train'])
+            prediction = np.argmax( prediction, axis=-1 )
+            predictions[output_field] = prediction
+        predictions.set_index(test_dataset.ID['train'], inplace=True)
+        submission = submission.append(predictions)
 
     df_to_submission_csv(
-        predictions,
+        submission,
         f"{settings['dir']['submissions']}/SingleOutputCNN-{model_hparams_key}-submission.csv"
     )
 
@@ -864,13 +888,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/simple_triple_df_cnn.py --save
 ##### 
-##### 2020-03-12 19:26:12+00:00
+##### 2020-03-13 03:39:29+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 6ad3198 [ahead 2] KaggleTimeoutCallback.py | implement 115m timeout for Kaggle
+##### * master b05fbbc [ahead 4] multi_output_df_cnn.py | initial implementation of multi output CNN + bugfixes and optimizations
 ##### 
-##### 6ad3198785e4776e0e42633ffc55def28893e84c
+##### b05fbbc2a227fe72fb2a0110d2f10a2a514be55f
 ##### 
 ##### Wrote: ./data_output/scripts/simple_triple_df_cnn.py
