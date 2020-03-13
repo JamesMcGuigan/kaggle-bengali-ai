@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 03:49:31+00:00
+##### 2020-03-13 04:01:28+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 189940f [ahead 1] multi_output_df_cnn.py | kaggle kernel fix
+##### * master 3c488d1 [ahead 1] multi_output_df_cnn.py | set epochs=999
 ##### 
-##### 189940f7ac0c2d72878d198f2668f72ef4b59266
+##### 3c488d1eaab52affd591bf84289afd85d2495d3f
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -420,7 +420,7 @@ def multi_output_df_cnn(train_hparams, model_hparams):
             history = model.fit(
                 dataset.X["train"], dataset.Y["train"],
                 batch_size=hparams.get("batch_size"),
-                epochs=1,
+                epochs=999,
                 verbose=2,
                 validation_data=(dataset.X["valid"], dataset.Y["valid"]),
                 callbacks=[
@@ -522,13 +522,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 03:49:31+00:00
+##### 2020-03-13 04:01:28+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 189940f [ahead 1] multi_output_df_cnn.py | kaggle kernel fix
+##### * master 3c488d1 [ahead 1] multi_output_df_cnn.py | set epochs=999
 ##### 
-##### 189940f7ac0c2d72878d198f2668f72ef4b59266
+##### 3c488d1eaab52affd591bf84289afd85d2495d3f
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
