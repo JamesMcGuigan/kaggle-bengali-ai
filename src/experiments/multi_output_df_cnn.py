@@ -75,7 +75,7 @@ def multi_output_df_cnn(train_hparams, model_hparams):
             history = model.fit(
                 dataset.X["train"], dataset.Y["train"],
                 batch_size=hparams.get("batch_size"),
-                epochs=1,
+                epochs=999,
                 verbose=2,
                 validation_data=(dataset.X["valid"], dataset.Y["valid"]),
                 callbacks=[
