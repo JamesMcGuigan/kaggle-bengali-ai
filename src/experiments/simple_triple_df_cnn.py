@@ -112,16 +112,20 @@ def simple_triple_df_cnn(train_hparams, model_hparams):
 
 
     ### Output Predictions to CSV
-    test_dataset = DatasetDF(test_train='test', data_id='*')  # contains all test data
-    predictions  = pd.DataFrame()
-    for output_field in output_fields:
-        prediction = models[output_field].predict(test_dataset.X['train'])
-        prediction = np.argmax( prediction, axis=-1 )
-        predictions[output_field] = prediction
-
+    ### Loop over data_id because submission test data is large: Submission Error: Notebook Exceeded Allowed Compute
+    submission = pd.DataFrame()
+    for data_id in range(0,4):
+        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # contains all test data
+        predictions  = pd.DataFrame()
+        for output_field in output_fields:
+            prediction = models[output_field].predict(test_dataset.X['train'])
+            prediction = np.argmax( prediction, axis=-1 )
+            predictions[output_field] = prediction
+        predictions.set_index(test_dataset.ID['train'], inplace=True)
+        submission = submission.append(predictions)
 
     df_to_submission_csv(
-        predictions,
+        submission,
         f"{settings['dir']['submissions']}/SingleOutputCNN-{model_hparams_key}-submission.csv"
     )
 

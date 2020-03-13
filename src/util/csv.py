@@ -8,9 +8,10 @@ def df_to_submission(df: DataFrame) -> DataFrame:
     submission = DataFrame(columns=['row_id', 'target'])
     for index, row in df.iterrows():
         for output_field in output_fields:
+            index = f"Test_{index}" if not str(index).startswith('T') else index
             submission = submission.append({
-                'row_id': f"Test_{index}_{output_field}",
-                'target': df[output_field].iloc[index],
+                'row_id': f"{index}_{output_field}",
+                'target': df[output_field].loc[index],
             }, ignore_index=True)
     return submission
 
