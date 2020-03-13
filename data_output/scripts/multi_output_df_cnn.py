@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 03:47:37+00:00
+##### 2020-03-13 03:49:31+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master efeef72 kaggle_compile.py | simple_triple_df_cnn.py + multi_output_df_cnn.py
+##### * master 189940f [ahead 1] multi_output_df_cnn.py | kaggle kernel fix
 ##### 
-##### efeef72ebbb0d31200b118655b6810990d208c20
+##### 189940f7ac0c2d72878d198f2668f72ef4b59266
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -501,9 +501,9 @@ if __name__ == '__main__':
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
-        # "patience":      10,
         # "fraction":      1.0,
-        "loops":         1,
+        "patience":      10,
+        "loops":         2,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -522,13 +522,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 03:47:37+00:00
+##### 2020-03-13 03:49:31+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master efeef72 kaggle_compile.py | simple_triple_df_cnn.py + multi_output_df_cnn.py
+##### * master 189940f [ahead 1] multi_output_df_cnn.py | kaggle kernel fix
 ##### 
-##### efeef72ebbb0d31200b118655b6810990d208c20
+##### 189940f7ac0c2d72878d198f2668f72ef4b59266
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py

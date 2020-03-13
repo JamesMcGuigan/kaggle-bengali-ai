@@ -156,9 +156,9 @@ if __name__ == '__main__':
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
-        # "patience":      10,
         # "fraction":      1.0,
-        "loops":         1,
+        "patience":      10,
+        "loops":         2,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
