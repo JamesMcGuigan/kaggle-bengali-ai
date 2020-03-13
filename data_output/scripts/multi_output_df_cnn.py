@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 03:39:50+00:00
+##### 2020-03-13 03:47:37+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master b05fbbc [ahead 4] multi_output_df_cnn.py | initial implementation of multi output CNN + bugfixes and optimizations
+##### * master efeef72 kaggle_compile.py | simple_triple_df_cnn.py + multi_output_df_cnn.py
 ##### 
-##### b05fbbc2a227fe72fb2a0110d2f10a2a514be55f
+##### efeef72ebbb0d31200b118655b6810990d208c20
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -360,8 +360,9 @@ from tensorflow.keras.callbacks import EarlyStopping
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
+# NOTE: This line doesn't work on Kaggle
 # https://stackoverflow.com/questions/34199233/how-to-prevent-tensorflow-from-allocating-the-totality-of-a-gpu-memory
-[ tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices('GPU') ]
+# [ tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices('GPU') ]
 
 
 
@@ -521,13 +522,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 03:39:50+00:00
+##### 2020-03-13 03:47:37+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master b05fbbc [ahead 4] multi_output_df_cnn.py | initial implementation of multi output CNN + bugfixes and optimizations
+##### * master efeef72 kaggle_compile.py | simple_triple_df_cnn.py + multi_output_df_cnn.py
 ##### 
-##### b05fbbc2a227fe72fb2a0110d2f10a2a514be55f
+##### efeef72ebbb0d31200b118655b6810990d208c20
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
