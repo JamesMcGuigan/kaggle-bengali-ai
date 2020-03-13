@@ -4,7 +4,9 @@ import time
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow_core.python.keras.callbacks import ModelCheckpoint
 
 from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
@@ -88,6 +90,16 @@ def multi_output_df_cnn(train_hparams, model_hparams):
                         restore_best_weights=True
                     ),
                     KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
+                    ModelCheckpoint(
+                        model_file,
+                        monitor='val_loss',
+                        verbose=False,
+                        save_best_only=True,
+                        save_weights_only=False,
+                        mode='auto',
+                    ),
+                    tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
+                    KerasCallback(log_dir, hparams),                                    # log train_hparams
                 ]
             )
             timer_seconds = int(time.time() - timer_start)
