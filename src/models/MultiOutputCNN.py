@@ -2,14 +2,15 @@ import inspect
 import types
 from typing import cast, Union, List, Dict
 
-from tensorflow_core.python.keras import Input, Model, regularizers
-from tensorflow_core.python.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
+from tensorflow.keras import Input, Model, regularizers
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
     GlobalMaxPooling2D
 
 
+# noinspection DuplicatedCode
 def MultiOutputCNN(
         input_shape,
-        output_shapes: Union[List, Dict],
+        output_shape: Union[List, Dict],
         cnns_per_maxpool=1,
         maxpool_layers=1,
         dense_layers=1,
@@ -49,15 +50,17 @@ def MultiOutputCNN(
         x = BatchNormalization()(x)
         x = Dropout(dropout)(x)
 
-    if isinstance(output_shapes, dict):
+    x = Flatten(name='output')(x)
+
+    if isinstance(output_shape, dict):
         outputs = [
             Dense(output_shape, activation='softmax', name=key)(x)
-            for key, output_shape in output_shapes.items()
+            for key, output_shape in output_shape.items()
         ]
     else:
         outputs = [
             Dense(output_shape, activation='softmax', name=f'output_{index}')(x)
-            for index, output_shape in enumerate(output_shapes)
+            for index, output_shape in enumerate(output_shape)
         ]
 
     model = Model(inputs, outputs, name=model_name)

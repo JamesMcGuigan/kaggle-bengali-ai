@@ -1,20 +1,14 @@
 import os
-import time
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorboard.plugins.hparams.api import KerasCallback
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow_core.python.keras.callbacks import ModelCheckpoint
 
-from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
 from src.models.MultiOutputCNN import MultiOutputCNN
-# from src.util.hparam import model_compile_fit
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv
+from src.util.hparam import model_compile_fit
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
@@ -23,24 +17,30 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Log
 # [ tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices('GPU') ]
 
 
+def hparam_key(hparams):
+    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
 
-def multi_output_df_cnn(train_hparams, model_hparams):
-    pipeline_name     = "multi_output_df_cnn"
-    model_hparams_key = "-".join( f"{key}={value}" for key,value in model_hparams.items() ).replace(' ','')
+
+def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
+    print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
 
-    csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
+    model_hparams_key = hparam_key(model_hparams)
+    train_hparams_key = hparam_key(train_hparams)
+
+    # csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
     model_file  = f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
-    log_dir     = f"{settings['dir']['logs']}/{pipeline_name}"
+    log_dir     = f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
 
     os.makedirs(os.path.dirname(model_file), exist_ok=True)
     os.makedirs(log_dir,                     exist_ok=True)
 
-    output_shapes = csv_data.drop(columns='image_id').nunique().to_dict()
+    # output_shape = csv_data.drop(columns='image_id').nunique().to_dict()
+    output_shape = DatasetDF.output_shape()
     model = MultiOutputCNN(
         input_shape=(137,236, 1),
-        output_shapes=output_shapes,
+        output_shape=output_shape,
         **model_hparams,
     )
     if os.path.exists( model_file ):
@@ -63,73 +63,46 @@ def multi_output_df_cnn(train_hparams, model_hparams):
                 fraction=train_hparams['fraction'],
             )
 
-            hparams   = { **settings['hparam_defaults'], **train_hparams }
-            optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
-
-            timer_start = time.time()
-            model.compile(
-                loss={
-                    key: tf.keras.losses.categorical_crossentropy
-                    for key in output_shapes.keys()
-                },
-                optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.0001)),
-                metrics=['accuracy']
+            stats = model_compile_fit(
+                hparams      = {**train_hparams, **model_hparams},
+                model        = model,
+                dataset      = dataset,
+                output_shape = output_shape,
+                model_file   = model_file,
+                log_dir      = log_dir,
+                best_only    = True,
+                verbose      = 2,
             )
-            history = model.fit(
-                dataset.X["train"], dataset.Y["train"],
-                batch_size=hparams.get("batch_size"),
-                epochs=999,
-                verbose=2,
-                validation_data=(dataset.X["valid"], dataset.Y["valid"]),
-                callbacks=[
-                    EarlyStopping(
-                        monitor='val_loss',
-                        mode='min',
-                        verbose=True,
-                        patience=hparams.get('patience'),
-                        restore_best_weights=True
-                    ),
-                    KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
-                    ModelCheckpoint(
-                        model_file,
-                        monitor='val_loss',
-                        verbose=False,
-                        save_best_only=True,
-                        save_weights_only=False,
-                        mode='auto',
-                    ),
-                    tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
-                    KerasCallback(log_dir, hparams),                                    # log train_hparams
-                ]
-            )
-            timer_seconds = int(time.time() - timer_start)
-
-            if 'val_loss' in history.history:
-                best_epoch      = history.history['val_loss'].index(min( history.history['val_loss'] ))
-                stats           = { key: value[best_epoch] for key, value in history.history.items() }
-                stats['time']   = timer_seconds
-                stats['epochs'] = len(history.history['loss'])
-                model_stats.append(stats)
+            if stats is None: break  # KaggleTimeoutCallback() triggered on_train_begin()
+            model_stats.append(stats)
+        else: continue
+        break                        # KaggleTimeoutCallback() triggered on_train_begin()
+    return model, model_stats, output_shape
 
 
-    ### Log Stats Results
-    logfilename = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
+
+### Log Stats Results
+def log_stats_results(model_stats, logfilename):
     with open(logfilename, 'w') as file:
-        output = []
-        output.append("------------------------------")
-        output.append(f"Completed")
-        output.append(f"model_hparams: {model_hparams}")
-        output.append(f"train_hparams: {train_hparams}")
-        for stats in model_stats:
-            output.append(str(stats))
-        output.append("------------------------------")
-        print(      "\n".join(output) )
-        file.write( "\n".join(output) )
+        output = [
+            "------------------------------",
+            f"Completed",
+            f"model_hparams: {model_hparams}",
+            f"train_hparams: {train_hparams}"
+        ]
+        output += list(map(str, model_stats))
+        output += [
+            "------------------------------"
+        ]
+        output = "\n".join(output)
+        print(      output )
+        file.write( output )
         print("wrote:", logfilename)
 
 
-    ### Output Predictions to CSV
-    submission = pd.DataFrame(columns=output_shapes.keys())
+### Predict Output Submssion
+def submission_df(model, output_shape):
+    submission = pd.DataFrame(columns=output_shape.keys())
     for data_id in range(0,4):
         test_dataset = DatasetDF(test_train='test', data_id=data_id)  # contains all test data
         predictions  = model.predict(test_dataset.X['train'])
@@ -137,14 +110,11 @@ def multi_output_df_cnn(train_hparams, model_hparams):
         submission = submission.append(
             pd.DataFrame({
                 key: np.argmax( predictions[index], axis=-1 )
-                for index, key in enumerate(output_shapes.keys())
+                for index, key in enumerate(output_shape.keys())
             }, index=test_dataset.ID['train'])
         )
+    return submission
 
-    df_to_submission_csv(
-        submission,
-        f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
-    )
 
 
 if __name__ == '__main__':
@@ -167,6 +137,11 @@ if __name__ == '__main__':
         "optimizer":     "RMSprop",
         "scheduler":     "constant",
         "learning_rate": 0.001,
+
+        # "optimizer": "Adagrad",
+        # "scheduler": "plateau2",
+        # "learning_rate": 1,
+
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
@@ -177,8 +152,19 @@ if __name__ == '__main__':
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
         train_hparams['loops']    = 1
-
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
+
     argparse_from_dicts([train_hparams, model_hparams])
 
-    multi_output_df_cnn(train_hparams, model_hparams)
+
+    pipeline_name     = "multi_output_df_cnn"
+    model_hparams_key = hparam_key(model_hparams)
+    train_hparams_key = hparam_key(train_hparams)
+    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
+    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
+
+    model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
+
+    submission = submission_df(model, output_shape)
+    df_to_submission_csv( submission, csv_filename )
+

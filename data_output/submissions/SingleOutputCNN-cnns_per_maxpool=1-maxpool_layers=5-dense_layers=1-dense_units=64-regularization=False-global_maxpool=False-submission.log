@@ -1,25 +1,25 @@
 ------------------------------
 Completed | consonant_diacritic
 model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 5, 'loops': 1, 'timeout': '110m'}
-{'loss': 0.31240029801911173, 'accuracy': 0.89481676, 'val_loss': 0.4578573080653381, 'val_accuracy': 0.8629755, 'lr': 0.001, 'time': 682, 'epochs': 14}
-{'loss': 0.3039797115340173, 'accuracy': 0.90036845, 'val_loss': 0.4308727601032242, 'val_accuracy': 0.8616809, 'lr': 0.001, 'time': 393, 'epochs': 8}
-{'loss': 0.29215096519231276, 'accuracy': 0.90340567, 'val_loss': 0.301937293588486, 'val_accuracy': 0.8903605, 'lr': 0.001, 'time': 345, 'epochs': 7}
-{'loss': 0.296825000763628, 'accuracy': 0.9032812, 'val_loss': 0.3140678854488182, 'val_accuracy': 0.9110735, 'lr': 0.001, 'time': 297, 'epochs': 6}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 0, 'loops': 1, 'timeout': '110m'}
+{'loss': 0.2690788254993557, 'accuracy': 0.9116212, 'val_loss': 0.36907564913507146, 'val_accuracy': 0.8722366, 'lr': 0.001, 'time': 158, 'epochs': 3}
+{'loss': 0.2775004931332889, 'accuracy': 0.91124773, 'val_loss': 0.6292789710918951, 'val_accuracy': 0.76150167, 'lr': 0.001, 'time': 107, 'epochs': 2}
+{'loss': 0.27895975290981095, 'accuracy': 0.908559, 'val_loss': 0.3776850885448406, 'val_accuracy': 0.89703244, 'lr': 0.001, 'time': 111, 'epochs': 2}
+{'loss': 0.2705036113162934, 'accuracy': 0.9130153, 'val_loss': 0.5684315354623207, 'val_accuracy': 0.8160725, 'lr': 0.001, 'time': 113, 'epochs': 2}
 ------------------------------
 Completed | grapheme_root
 model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 5, 'loops': 1, 'timeout': '110m'}
-{'loss': 1.5814669118699645, 'accuracy': 0.5660725, 'val_loss': 1.2185269833750707, 'val_accuracy': 0.68562037, 'lr': 0.001, 'time': 1262, 'epochs': 26}
-{'loss': 1.570404678292304, 'accuracy': 0.5681637, 'val_loss': 1.1426057726993573, 'val_accuracy': 0.68462455, 'lr': 0.001, 'time': 442, 'epochs': 9}
-{'loss': 1.4158503772775102, 'accuracy': 0.60939056, 'val_loss': 1.1860068426073322, 'val_accuracy': 0.6992631, 'lr': 0.001, 'time': 876, 'epochs': 18}
-{'loss': 1.539414355774321, 'accuracy': 0.5830263, 'val_loss': 1.010157135788413, 'val_accuracy': 0.7274447, 'lr': 0.001, 'time': 298, 'epochs': 6}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 0, 'loops': 1, 'timeout': '110m'}
+{'loss': 1.4309412668815435, 'accuracy': 0.6101374, 'val_loss': 1.5261070250135285, 'val_accuracy': 0.6005776, 'lr': 0.001, 'time': 258, 'epochs': 5}
+{'loss': 1.4584006657759, 'accuracy': 0.60087633, 'val_loss': 1.4818049501646233, 'val_accuracy': 0.610237, 'lr': 0.001, 'time': 157, 'epochs': 3}
+{'loss': 1.4788154294779994, 'accuracy': 0.6015734, 'val_loss': 117.51978002509091, 'val_accuracy': 0.010356503, 'lr': 0.001, 'time': 109, 'epochs': 2}
+{'loss': 1.4180990938787987, 'accuracy': 0.61105853, 'val_loss': 1.2102440230472704, 'val_accuracy': 0.6728739, 'lr': 0.001, 'time': 258, 'epochs': 5}
 ------------------------------
 Completed | vowel_diacritic
 model_hparams: {'cnns_per_maxpool': 1, 'maxpool_layers': 5, 'dense_layers': 1, 'dense_units': 64, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 5, 'loops': 1, 'timeout': '110m'}
-{'loss': 0.31310227904168286, 'accuracy': 0.89641005, 'val_loss': 0.366246513234408, 'val_accuracy': 0.880004, 'lr': 0.001, 'time': 970, 'epochs': 20}
-{'loss': 0.3190154845888836, 'accuracy': 0.8954889, 'val_loss': 0.7488364154327155, 'val_accuracy': 0.72266483, 'lr': 0.001, 'time': 441, 'epochs': 9}
-{'loss': 0.31963112118756526, 'accuracy': 0.89598686, 'val_loss': 0.37428789133689383, 'val_accuracy': 0.88289183, 'lr': 0.001, 'time': 105, 'epochs': 2}
-{'loss': 0.33123770732491215, 'accuracy': 0.891904, 'val_loss': 2.661125454430655, 'val_accuracy': 0.46624178, 'lr': 0.001, 'time': 56, 'epochs': 1}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'patience': 0, 'loops': 1, 'timeout': '110m'}
+{'loss': 0.29507514744183855, 'accuracy': 0.9045011, 'val_loss': 1.252112947002252, 'val_accuracy': 0.62417847, 'lr': 0.001, 'time': 212, 'epochs': 4}
+{'loss': 0.2969094945944725, 'accuracy': 0.9050239, 'val_loss': 1.4586234169636938, 'val_accuracy': 0.4444334, 'lr': 0.001, 'time': 159, 'epochs': 3}
+{'loss': 0.3084545693200937, 'accuracy': 0.899771, 'val_loss': 1.244289810926737, 'val_accuracy': 0.5257917, 'lr': 0.001, 'time': 108, 'epochs': 2}
+{'loss': 0.3026971971281162, 'accuracy': 0.9038787, 'val_loss': 1.8322251695390954, 'val_accuracy': 0.551185, 'lr': 0.001, 'time': 158, 'epochs': 3}
 ------------------------------

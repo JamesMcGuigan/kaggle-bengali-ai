@@ -1,10 +1,12 @@
 import math
+import os
 import re
 import time
-from typing import Dict, AnyStr
+from typing import Dict, AnyStr, Union
 
 import tensorflow as tf
 from tensorboard.plugins.hparams.api import KerasCallback
+from tensorflow.keras.backend import categorical_crossentropy
 from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
     ModelCheckpoint
 
@@ -78,17 +80,30 @@ def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
     print("Unknown scheduler: ", hparams)
 
 
-def model_compile_fit(
-        hparams:    Dict,
-        model:      tf.keras.models.Model,
-        dataset:    DatasetDF,
-        model_file: AnyStr = None,
-        log_dir:    AnyStr = None,
-        best_only   = True,
-        verbose     = settings['verbose']['fit'],
-):
-    hparams   = { **settings['hparam_defaults'], **hparams }
-    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
+def losses(output_shape):
+    if   isinstance(output_shape, list): losses = [ categorical_crossentropy      for n   in output_shape        ]
+    elif isinstance(output_shape, dict): losses = { key: categorical_crossentropy for key in output_shape.keys() }
+    else:                                losses = categorical_crossentropy
+    return losses
+
+
+def loss_weights(output_shape):
+    # unique = dataset.apply(lambda col: col.nunique()); unique
+    # grapheme_root           168   | sqrt = 12.9 / 54.9 = 0.24
+    # vowel_diacritic          11   | sqrt =  3.3 / 54.9 = 0.06
+    # consonant_diacritic       7   | sqrt =  2.6 / 54.9 = 0.05
+    # grapheme               1295   | sqrt = 35.9 / 54.9 = 0.65
+    if not isinstance(output_shape, dict): return None
+    norm    = sum(map(math.sqrt, output_shape.values()))
+    weights = {
+        key: math.sqrt(value)/norm
+        for key,value in output_shape.items()
+    }
+    return weights
+
+
+
+def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, verbose=False ):
     schedule  = scheduler(hparams, dataset, verbose=verbose)
 
     callbacks = [
@@ -101,7 +116,6 @@ def model_compile_fit(
         ),
         schedule,
         KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
-        # ProgbarLogger(count_mode='samples', stateful_metrics=None)
     ]
     if model_file:
         callbacks += [
@@ -114,25 +128,45 @@ def model_compile_fit(
                 mode='auto',
             )
         ]
-    if log_dir and settings['verbose']['tensorboard']:
-        callbacks += [  
+    if log_dir and settings['verbose']['tensorboard'] and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        callbacks += [
             tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
             KerasCallback(log_dir, hparams)                                     # log train_hparams
         ]
+    return callbacks
+
+
+def model_compile_fit(
+        hparams:      Dict,
+        model:        tf.keras.models.Model,
+        dataset:      DatasetDF,
+        epochs      = 999,
+        output_shape: Union[None, int, Dict] = None,
+        model_file:   AnyStr = None,
+        log_dir:      AnyStr = None,
+        best_only   = True,
+        verbose     = settings['verbose']['fit'],
+):
+    hparams   = { **settings['hparam_defaults'], **hparams }
+    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
+    callback  = callbacks(hparams, dataset, model_file, log_dir, best_only, verbose)
+    loss      = losses(output_shape)
+    weights   = loss_weights(output_shape)
 
     timer_start = time.time()
     model.compile(
-        loss=tf.keras.losses.categorical_crossentropy,
-        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.0001)),
+        loss=loss,
+        loss_weights=weights,
+        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
         metrics=['accuracy']
     )
     history = model.fit(
         dataset.X["train"], dataset.Y["train"],
         batch_size=hparams.get("batch_size", 128),
-        epochs=999,
+        epochs=epochs,
         verbose=verbose,
         validation_data=(dataset.X["valid"], dataset.Y["valid"]),
-        callbacks=callbacks
+        callbacks=callback
     )
     timer_seconds = int(time.time() - timer_start)
 

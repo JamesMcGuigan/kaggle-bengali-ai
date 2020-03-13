@@ -2,8 +2,8 @@ import inspect
 import types
 from typing import cast
 
-from tensorflow_core.python.keras import Input, Model, regularizers
-from tensorflow_core.python.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
+from tensorflow.keras import Input, Model, regularizers
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
     GlobalMaxPooling2D
 
 

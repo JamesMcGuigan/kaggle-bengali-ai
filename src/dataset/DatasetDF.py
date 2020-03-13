@@ -12,6 +12,10 @@ from src.settings import settings
 
 
 class DatasetDF():
+    csv_filename         = f"{settings['dir']['data']}/train.csv"
+    csv_data             = pd.read_csv(csv_filename).set_index('image_id', drop=True).astype('category')
+    csv_data['grapheme'] = csv_data['grapheme'].cat.codes.astype('category')
+
     def __init__(self,
                  test_train   = 'train',
                  data_id: Union[str,int] = '0',
@@ -27,18 +31,16 @@ class DatasetDF():
         self.shuffle    = shuffle  if self.test_train is 'train' else False
         self.fraction   = fraction if self.test_train is 'train' else 1
 
-        self.csv_filename         = f"{settings['dir']['data']}/train.csv"
-        self.csv_data             = pd.read_csv(self.csv_filename).set_index('image_id', drop=True).astype('category')
-        self.csv_data['grapheme'] = self.csv_data['grapheme'].cat.codes.astype('category')
-
         self.image_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
 
         self.X:  Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
         self.Y:  Dict[AnyStr, Union[pd.DataFrame,Dict]] = { "train": pd.DataFrame(),   "valid": pd.DataFrame()   }
         self.ID: Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
         for filename in self.image_filenames:
-            raw = {}
-            raw['train'], raw['valid'] = pd.read_parquet(filename), None
+            raw = {
+                'train': pd.read_parquet(filename),
+                'valid': None
+            }
             if self.fraction < 1:
                 raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle, random_state=0)
                 del discard
@@ -90,14 +92,30 @@ class DatasetDF():
             }
         return output
 
-    def input_shape(self):
-        return self.X['train'].shape[1:]
-
-    def output_shape(self):
-        return self.Y['train'].shape[-1]
 
     def epoch_size(self):
         return self.X['train'].shape[0]
+
+
+    def input_shape(self):
+        return self.X['train'].shape[1:]  # == (137, 236, 1) / 2
+
+
+    # def output_shape(self):
+    #     return self.__class__.output_shape(self.Y_field)
+
+    @classmethod
+    def output_shape(cls, Y_field=None):
+        if isinstance(Y_field, str):
+            return cls.csv_data[Y_field].nunique()
+
+        csv_data     = cls.csv_data[Y_field] if Y_field else cls.csv_data
+        output_shape = (csv_data.drop(columns='image_id', errors='ignore')
+                                .nunique()
+                                .to_dict())
+        return output_shape
+
+
 
 
 if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
