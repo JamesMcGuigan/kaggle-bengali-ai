@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 04:15:56+00:00
+##### 2020-03-13 20:30:22+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master f46b498 [ahead 4] multi_output_df_cnn.py | add ModelCheckpoint() + Tensorboard()
+##### * master 77ab4ea [ahead 1] multi_output_df_cnn.py | refactor using hprams.model_compile_fit()
 ##### 
-##### f46b498563d136e3f0681b687f24679d81fd1954
+##### 77ab4eabfe54822ca5b79f8898ac24783c36e1a3
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -184,6 +184,10 @@ from sklearn.model_selection import train_test_split
 
 
 class DatasetDF():
+    csv_filename         = f"{settings['dir']['data']}/train.csv"
+    csv_data             = pd.read_csv(csv_filename).set_index('image_id', drop=True).astype('category')
+    csv_data['grapheme'] = csv_data['grapheme'].cat.codes.astype('category')
+
     def __init__(self,
                  test_train   = 'train',
                  data_id: Union[str,int] = '0',
@@ -199,18 +203,16 @@ class DatasetDF():
         self.shuffle    = shuffle  if self.test_train is 'train' else False
         self.fraction   = fraction if self.test_train is 'train' else 1
 
-        self.csv_filename         = f"{settings['dir']['data']}/train.csv"
-        self.csv_data             = pd.read_csv(self.csv_filename).set_index('image_id', drop=True).astype('category')
-        self.csv_data['grapheme'] = self.csv_data['grapheme'].cat.codes.astype('category')
-
         self.image_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
 
         self.X:  Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
         self.Y:  Dict[AnyStr, Union[pd.DataFrame,Dict]] = { "train": pd.DataFrame(),   "valid": pd.DataFrame()   }
         self.ID: Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
         for filename in self.image_filenames:
-            raw = {}
-            raw['train'], raw['valid'] = pd.read_parquet(filename), None
+            raw = {
+                'train': pd.read_parquet(filename),
+                'valid': None
+            }
             if self.fraction < 1:
                 raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle, random_state=0)
                 del discard
@@ -262,14 +264,30 @@ class DatasetDF():
             }
         return output
 
-    def input_shape(self):
-        return self.X['train'].shape[1:]
-
-    def output_shape(self):
-        return self.Y['train'].shape[-1]
 
     def epoch_size(self):
         return self.X['train'].shape[0]
+
+
+    def input_shape(self):
+        return self.X['train'].shape[1:]  # == (137, 236, 1) / 2
+
+
+    # def output_shape(self):
+    #     return self.__class__.output_shape(self.Y_field)
+
+    @classmethod
+    def output_shape(cls, Y_field=None):
+        if isinstance(Y_field, str):
+            return cls.csv_data[Y_field].nunique()
+
+        csv_data     = cls.csv_data[Y_field] if Y_field else cls.csv_data
+        output_shape = (csv_data.drop(columns='image_id', errors='ignore')
+                                .nunique()
+                                .to_dict())
+        return output_shape
+
+
 
 
 if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
@@ -290,6 +308,149 @@ if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 #####
 
 #####
+##### START vendor/CLR/clr_callback.py
+#####
+
+from tensorflow.keras.callbacks import *
+import tensorflow.keras.backend as K
+import numpy as np
+
+class CyclicLR(Callback):
+    """This callback implements a cyclical learning rate policy (CLR).
+    The method cycles the learning rate between two boundaries with
+    some constant frequency, as detailed in this paper (https://arxiv.org/abs/1506.01186).
+    The amplitude of the cycle can be scaled on a per-iteration or 
+    per-cycle basis.
+    This class has three built-in policies, as put forth in the paper.
+    "triangular":
+        A basic triangular cycle w/ no amplitude scaling.
+    "triangular2":
+        A basic triangular cycle that scales initial amplitude by half each cycle.
+    "exp_range":
+        A cycle that scales initial amplitude by gamma**(cycle iterations) at each 
+        cycle iteration.
+    For more detail, please see paper.
+    
+    # Example
+        ```python
+            clr = CyclicLR(base_lr=0.001, max_lr=0.006,
+                                step_size=2000., mode='triangular')
+            model.fit(X_train, Y_train, callbacks=[clr])
+        ```
+    
+    Class also supports custom scaling functions:
+        ```python
+            clr_fn = lambda x: 0.5*(1+np.sin(x*np.pi/2.))
+            clr = CyclicLR(base_lr=0.001, max_lr=0.006,
+                                step_size=2000., scale_fn=clr_fn,
+                                scale_mode='cycle')
+            model.fit(X_train, Y_train, callbacks=[clr])
+        ```    
+    # Arguments
+        base_lr: initial learning rate which is the
+            lower boundary in the cycle.
+        max_lr: upper boundary in the cycle. Functionally,
+            it defines the cycle amplitude (max_lr - base_lr).
+            The lr at any cycle is the sum of base_lr
+            and some scaling of the amplitude; therefore 
+            max_lr may not actually be reached depending on
+            scaling function.
+        step_size: number of training iterations per
+            half cycle. Authors suggest setting step_size
+            2-8 x training iterations in epoch.
+        mode: one of {triangular, triangular2, exp_range}.
+            Default 'triangular'.
+            Values correspond to policies detailed above.
+            If scale_fn is not None, this argument is ignored.
+        gamma: constant in 'exp_range' scaling function:
+            gamma**(cycle iterations)
+        scale_fn: Custom scaling policy defined by a single
+            argument lambda function, where 
+            0 <= scale_fn(x) <= 1 for all x >= 0.
+            mode paramater is ignored 
+        scale_mode: {'cycle', 'iterations'}.
+            Defines whether scale_fn is evaluated on 
+            cycle number or cycle iterations (training
+            iterations since start of cycle). Default is 'cycle'.
+    """
+
+    def __init__(self, base_lr=0.001, max_lr=0.006, step_size=2000., mode='triangular',
+                 gamma=1., scale_fn=None, scale_mode='cycle'):
+        super(CyclicLR, self).__init__()
+
+        self.base_lr = base_lr
+        self.max_lr = max_lr
+        self.step_size = step_size
+        self.mode = mode
+        self.gamma = gamma
+        if scale_fn == None:
+            if self.mode == 'triangular':
+                self.scale_fn = lambda x: 1.
+                self.scale_mode = 'cycle'
+            elif self.mode == 'triangular2':
+                self.scale_fn = lambda x: 1/(2.**(x-1))
+                self.scale_mode = 'cycle'
+            elif self.mode == 'exp_range':
+                self.scale_fn = lambda x: gamma**(x)
+                self.scale_mode = 'iterations'
+        else:
+            self.scale_fn = scale_fn
+            self.scale_mode = scale_mode
+        self.clr_iterations = 0.
+        self.trn_iterations = 0.
+        self.history = {}
+
+        self._reset()
+
+    def _reset(self, new_base_lr=None, new_max_lr=None,
+               new_step_size=None):
+        """Resets cycle iterations.
+        Optional boundary/step size adjustment.
+        """
+        if new_base_lr != None:
+            self.base_lr = new_base_lr
+        if new_max_lr != None:
+            self.max_lr = new_max_lr
+        if new_step_size != None:
+            self.step_size = new_step_size
+        self.clr_iterations = 0.
+        
+    def clr(self):
+        cycle = np.floor(1+self.clr_iterations/(2*self.step_size))
+        x = np.abs(self.clr_iterations/self.step_size - 2*cycle + 1)
+        if self.scale_mode == 'cycle':
+            return self.base_lr + (self.max_lr-self.base_lr)*np.maximum(0, (1-x))*self.scale_fn(cycle)
+        else:
+            return self.base_lr + (self.max_lr-self.base_lr)*np.maximum(0, (1-x))*self.scale_fn(self.clr_iterations)
+        
+    def on_train_begin(self, logs={}):
+        logs = logs or {}
+
+        if self.clr_iterations == 0:
+            K.set_value(self.model.optimizer.lr, self.base_lr)
+        else:
+            K.set_value(self.model.optimizer.lr, self.clr())        
+            
+    def on_batch_end(self, epoch, logs=None):
+        
+        logs = logs or {}
+        self.trn_iterations += 1
+        self.clr_iterations += 1
+
+        self.history.setdefault('lr', []).append(K.get_value(self.model.optimizer.lr))
+        self.history.setdefault('iterations', []).append(self.trn_iterations)
+
+        for k, v in logs.items():
+            self.history.setdefault(k, []).append(v)
+        
+        K.set_value(self.model.optimizer.lr, self.clr())
+
+
+#####
+##### END   vendor/CLR/clr_callback.py
+#####
+
+#####
 ##### START src/models/MultiOutputCNN.py
 #####
 
@@ -297,14 +458,15 @@ import inspect
 import types
 from typing import cast, Union, List, Dict
 
-from tensorflow_core.python.keras import Input, Model, regularizers
-from tensorflow_core.python.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
+from tensorflow.keras import Input, Model, regularizers
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
     GlobalMaxPooling2D
 
 
+# noinspection DuplicatedCode
 def MultiOutputCNN(
         input_shape,
-        output_shapes: Union[List, Dict],
+        output_shape: Union[List, Dict],
         cnns_per_maxpool=1,
         maxpool_layers=1,
         dense_layers=1,
@@ -344,15 +506,17 @@ def MultiOutputCNN(
         x = BatchNormalization()(x)
         x = Dropout(dropout)(x)
 
-    if isinstance(output_shapes, dict):
+    x = Flatten(name='output')(x)
+
+    if isinstance(output_shape, dict):
         outputs = [
             Dense(output_shape, activation='softmax', name=key)(x)
-            for key, output_shape in output_shapes.items()
+            for key, output_shape in output_shape.items()
         ]
     else:
         outputs = [
             Dense(output_shape, activation='softmax', name=f'output_{index}')(x)
-            for index, output_shape in enumerate(output_shapes)
+            for index, output_shape in enumerate(output_shape)
         ]
 
     model = Model(inputs, outputs, name=model_name)
@@ -424,26 +588,210 @@ def df_to_submission_csv(df: DataFrame, filename: str):
 #####
 
 #####
+##### START src/util/hparam.py
+#####
+
+import math
+import os
+import re
+import time
+from typing import Dict, AnyStr, Union
+
+import tensorflow as tf
+from tensorboard.plugins.hparams.api import KerasCallback
+from tensorflow.keras.backend import categorical_crossentropy
+from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
+    ModelCheckpoint
+
+# from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
+# from src.dataset.DatasetDF import DatasetDF
+# from src.settings import settings
+# from vendor.CLR.clr_callback import CyclicLR
+
+
+def min_lr(hparams):
+    # tensorboard --logdir logs/convergence_search/min_lr-optimized_scheduler-random-scheduler/ --reload_multifile=true
+    # There is a high degree of randomness in this parameter, so it is hard to distinguish from statistical noise
+    # Lower min_lr values for CycleCR tend to train slower
+    hparams = { **settings['hparam_defaults'], **hparams }
+    if 'min_lr'  in hparams:              return hparams['min_lr']
+    if hparams["optimizer"] == "SGD":     return 1e05  # preferred by SGD
+    else:                                 return 1e03  # fastest, least overfitting and most accidental high-scores
+
+
+# DOCS: https://ruder.io/optimizing-gradient-descent/index.html
+def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
+    hparams = { **settings['hparam_defaults'], **hparams }
+    if hparams['scheduler'] is 'constant':
+        return LearningRateScheduler(lambda epocs: hparams['learning_rate'], verbose=False)
+
+    if hparams['scheduler'] is 'linear_decay':
+        return LearningRateScheduler(
+            lambda epocs: max(
+                hparams['learning_rate'] * (10. / (10. + epocs)),
+                min_lr(hparams)
+            ),
+            verbose=verbose
+        )
+
+    if hparams['scheduler'].startswith('CyclicLR') \
+            or hparams['scheduler'] in ["triangular", "triangular2", "exp_range"]:
+        # DOCS: https://www.datacamp.com/community/tutorials/cyclical-learning-neural-nets
+        # CyclicLR_triangular, CyclicLR_triangular2, CyclicLR_exp_range
+        mode = re.sub(r'^CyclicLR_', '', hparams['scheduler'])
+
+        # step_size should be epoc multiple between 2 and 8, but multiple of 2 (= full up/down cycle)
+        if   hparams['patience'] <=  6: whole_cycles = 1   #  1/2   = 0.5  | 6/2    = 3
+        elif hparams['patience'] <= 12: whole_cycles = 2   #  8/4   = 2    | 12/4   = 3
+        elif hparams['patience'] <= 24: whole_cycles = 3   # 14/6   = 2.3  | 24/6   = 4
+        elif hparams['patience'] <= 36: whole_cycles = 4   # 26/8   = 3.25 | 36/8   = 4.5
+        elif hparams['patience'] <= 48: whole_cycles = 5   # 28/10  = 2.8  | 48/10  = 4.8
+        elif hparams['patience'] <= 72: whole_cycles = 6   # 50/12  = 4.2  | 72/12  = 6
+        elif hparams['patience'] <= 96: whole_cycles = 8   # 74/16  = 4.6  | 96/16  = 6
+        else:                           whole_cycles = 12  # 100/24 = 4.2  | 192/24 = 8
+
+        return CyclicLR(
+            mode      = mode,
+            step_size =dataset.epoch_size() * (hparams['patience'] / (2.0 * whole_cycles)),
+            base_lr   = min_lr(hparams),
+            max_lr    = hparams['learning_rate']
+        )
+
+    if hparams['scheduler'].startswith('plateau'):
+        factor = int(( re.findall(r'\d+', hparams['scheduler']) + [10] )[0])            # plateau2      || plateau10 (default)
+        if 'sqrt' in hparams['scheduler']:  patience = math.sqrt(hparams['patience'])  # plateau2_sqrt || plateau10__sqrt
+        else:                               patience = hparams['patience'] / 2.0
+
+        return ReduceLROnPlateau(
+            monitor  = 'val_loss',
+            factor   = 1 / factor,
+            patience = math.floor(patience),
+            min_lr   = 0,   # min_lr(train_hparams),
+            verbose  = verbose,
+        )
+
+    print("Unknown scheduler: ", hparams)
+
+
+def losses(output_shape):
+    if   isinstance(output_shape, list): losses = [ categorical_crossentropy      for n   in output_shape        ]
+    elif isinstance(output_shape, dict): losses = { key: categorical_crossentropy for key in output_shape.keys() }
+    else:                                losses = categorical_crossentropy
+    return losses
+
+
+def loss_weights(output_shape):
+    # unique = dataset.apply(lambda col: col.nunique()); unique
+    # grapheme_root           168   | sqrt = 12.9 / 54.9 = 0.24
+    # vowel_diacritic          11   | sqrt =  3.3 / 54.9 = 0.06
+    # consonant_diacritic       7   | sqrt =  2.6 / 54.9 = 0.05
+    # grapheme               1295   | sqrt = 35.9 / 54.9 = 0.65
+    if not isinstance(output_shape, dict): return None
+    norm    = sum(map(math.sqrt, output_shape.values()))
+    weights = {
+        key: math.sqrt(value)/norm
+        for key,value in output_shape.items()
+    }
+    return weights
+
+
+
+def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, verbose=False ):
+    schedule  = scheduler(hparams, dataset, verbose=verbose)
+
+    callbacks = [
+        EarlyStopping(
+            monitor='val_loss',
+            mode='min',
+            verbose=verbose,
+            patience=hparams.get('patience', hparams['patience']),
+            restore_best_weights=best_only
+        ),
+        schedule,
+        KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
+    ]
+    if model_file:
+        callbacks += [
+            ModelCheckpoint(
+                model_file,
+                monitor='val_loss',
+                verbose=False,
+                save_best_only=best_only,
+                save_weights_only=False,
+                mode='auto',
+            )
+        ]
+    if log_dir and settings['verbose']['tensorboard'] and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        callbacks += [
+            tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
+            KerasCallback(log_dir, hparams)                                     # log train_hparams
+        ]
+    return callbacks
+
+
+def model_compile_fit(
+        hparams:      Dict,
+        model:        tf.keras.models.Model,
+        dataset:      DatasetDF,
+        epochs      = 999,
+        output_shape: Union[None, int, Dict] = None,
+        model_file:   AnyStr = None,
+        log_dir:      AnyStr = None,
+        best_only   = True,
+        verbose     = settings['verbose']['fit'],
+):
+    hparams   = { **settings['hparam_defaults'], **hparams }
+    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
+    callback  = callbacks(hparams, dataset, model_file, log_dir, best_only, verbose)
+    loss      = losses(output_shape)
+    weights   = loss_weights(output_shape)
+
+    timer_start = time.time()
+    model.compile(
+        loss=loss,
+        loss_weights=weights,
+        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
+        metrics=['accuracy']
+    )
+    history = model.fit(
+        dataset.X["train"], dataset.Y["train"],
+        batch_size=hparams.get("batch_size", 128),
+        epochs=epochs,
+        verbose=verbose,
+        validation_data=(dataset.X["valid"], dataset.Y["valid"]),
+        callbacks=callback
+    )
+    timer_seconds = int(time.time() - timer_start)
+
+    if 'val_loss' in history.history:
+        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
+        model_stats['time']   = timer_seconds
+        model_stats['epochs'] = len(history.history['loss'])
+    else:
+        model_stats = None
+    return model_stats
+
+
+#####
+##### END   src/util/hparam.py
+#####
+
+#####
 ##### START src/experiments/multi_output_df_cnn.py
 #####
 
 import os
-import time
 
 import numpy as np
 import pandas as pd
-import tensorflow as tf
-from tensorboard.plugins.hparams.api import KerasCallback
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow_core.python.keras.callbacks import ModelCheckpoint
 
-# from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
 # from src.models.MultiOutputCNN import MultiOutputCNN
-# from src.util.hparam import model_compile_fit
 # from src.settings import settings
 # from src.util.argparse import argparse_from_dicts
 # from src.util.csv import df_to_submission_csv
+# from src.util.hparam import model_compile_fit
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
@@ -452,24 +800,30 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Log
 # [ tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices('GPU') ]
 
 
+def hparam_key(hparams):
+    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
 
-def multi_output_df_cnn(train_hparams, model_hparams):
-    pipeline_name     = "multi_output_df_cnn"
-    model_hparams_key = "-".join( f"{key}={value}" for key,value in model_hparams.items() ).replace(' ','')
+
+def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
+    print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
 
-    csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
+    model_hparams_key = hparam_key(model_hparams)
+    train_hparams_key = hparam_key(train_hparams)
+
+    # csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
     model_file  = f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
-    log_dir     = f"{settings['dir']['logs']}/{pipeline_name}"
+    log_dir     = f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
 
     os.makedirs(os.path.dirname(model_file), exist_ok=True)
     os.makedirs(log_dir,                     exist_ok=True)
 
-    output_shapes = csv_data.drop(columns='image_id').nunique().to_dict()
+    # output_shape = csv_data.drop(columns='image_id').nunique().to_dict()
+    output_shape = DatasetDF.output_shape()
     model = MultiOutputCNN(
         input_shape=(137,236, 1),
-        output_shapes=output_shapes,
+        output_shape=output_shape,
         **model_hparams,
     )
     if os.path.exists( model_file ):
@@ -492,73 +846,46 @@ def multi_output_df_cnn(train_hparams, model_hparams):
                 fraction=train_hparams['fraction'],
             )
 
-            hparams   = { **settings['hparam_defaults'], **train_hparams }
-            optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
-
-            timer_start = time.time()
-            model.compile(
-                loss={
-                    key: tf.keras.losses.categorical_crossentropy
-                    for key in output_shapes.keys()
-                },
-                optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.0001)),
-                metrics=['accuracy']
+            stats = model_compile_fit(
+                hparams      = {**train_hparams, **model_hparams},
+                model        = model,
+                dataset      = dataset,
+                output_shape = output_shape,
+                model_file   = model_file,
+                log_dir      = log_dir,
+                best_only    = True,
+                verbose      = 2,
             )
-            history = model.fit(
-                dataset.X["train"], dataset.Y["train"],
-                batch_size=hparams.get("batch_size"),
-                epochs=999,
-                verbose=2,
-                validation_data=(dataset.X["valid"], dataset.Y["valid"]),
-                callbacks=[
-                    EarlyStopping(
-                        monitor='val_loss',
-                        mode='min',
-                        verbose=True,
-                        patience=hparams.get('patience'),
-                        restore_best_weights=True
-                    ),
-                    KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
-                    ModelCheckpoint(
-                        model_file,
-                        monitor='val_loss',
-                        verbose=False,
-                        save_best_only=True,
-                        save_weights_only=False,
-                        mode='auto',
-                    ),
-                    tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1),  # log metrics
-                    KerasCallback(log_dir, hparams),                                    # log train_hparams
-                ]
-            )
-            timer_seconds = int(time.time() - timer_start)
-
-            if 'val_loss' in history.history:
-                best_epoch      = history.history['val_loss'].index(min( history.history['val_loss'] ))
-                stats           = { key: value[best_epoch] for key, value in history.history.items() }
-                stats['time']   = timer_seconds
-                stats['epochs'] = len(history.history['loss'])
-                model_stats.append(stats)
+            if stats is None: break  # KaggleTimeoutCallback() triggered on_train_begin()
+            model_stats.append(stats)
+        else: continue
+        break                        # KaggleTimeoutCallback() triggered on_train_begin()
+    return model, model_stats, output_shape
 
 
-    ### Log Stats Results
-    logfilename = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
+
+### Log Stats Results
+def log_stats_results(model_stats, logfilename):
     with open(logfilename, 'w') as file:
-        output = []
-        output.append("------------------------------")
-        output.append(f"Completed")
-        output.append(f"model_hparams: {model_hparams}")
-        output.append(f"train_hparams: {train_hparams}")
-        for stats in model_stats:
-            output.append(str(stats))
-        output.append("------------------------------")
-        print(      "\n".join(output) )
-        file.write( "\n".join(output) )
+        output = [
+            "------------------------------",
+            f"Completed",
+            f"model_hparams: {model_hparams}",
+            f"train_hparams: {train_hparams}"
+        ]
+        output += list(map(str, model_stats))
+        output += [
+            "------------------------------"
+        ]
+        output = "\n".join(output)
+        print(      output )
+        file.write( output )
         print("wrote:", logfilename)
 
 
-    ### Output Predictions to CSV
-    submission = pd.DataFrame(columns=output_shapes.keys())
+### Predict Output Submssion
+def submission_df(model, output_shape):
+    submission = pd.DataFrame(columns=output_shape.keys())
     for data_id in range(0,4):
         test_dataset = DatasetDF(test_train='test', data_id=data_id)  # contains all test data
         predictions  = model.predict(test_dataset.X['train'])
@@ -566,14 +893,11 @@ def multi_output_df_cnn(train_hparams, model_hparams):
         submission = submission.append(
             pd.DataFrame({
                 key: np.argmax( predictions[index], axis=-1 )
-                for index, key in enumerate(output_shapes.keys())
+                for index, key in enumerate(output_shape.keys())
             }, index=test_dataset.ID['train'])
         )
+    return submission
 
-    df_to_submission_csv(
-        submission,
-        f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
-    )
 
 
 if __name__ == '__main__':
@@ -596,6 +920,11 @@ if __name__ == '__main__':
         "optimizer":     "RMSprop",
         "scheduler":     "constant",
         "learning_rate": 0.001,
+
+        # "optimizer": "Adagrad",
+        # "scheduler": "plateau2",
+        # "learning_rate": 1,
+
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
@@ -606,11 +935,22 @@ if __name__ == '__main__':
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
         train_hparams['loops']    = 1
-
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
+
     argparse_from_dicts([train_hparams, model_hparams])
 
-    multi_output_df_cnn(train_hparams, model_hparams)
+
+    pipeline_name     = "multi_output_df_cnn"
+    model_hparams_key = hparam_key(model_hparams)
+    train_hparams_key = hparam_key(train_hparams)
+    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
+    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
+
+    model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
+
+    submission = submission_df(model, output_shape)
+    df_to_submission_csv( submission, csv_filename )
+
 
 
 #####
@@ -620,13 +960,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 04:15:56+00:00
+##### 2020-03-13 20:30:22+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master f46b498 [ahead 4] multi_output_df_cnn.py | add ModelCheckpoint() + Tensorboard()
+##### * master 77ab4ea [ahead 1] multi_output_df_cnn.py | refactor using hprams.model_compile_fit()
 ##### 
-##### f46b498563d136e3f0681b687f24679d81fd1954
+##### 77ab4eabfe54822ca5b79f8898ac24783c36e1a3
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
