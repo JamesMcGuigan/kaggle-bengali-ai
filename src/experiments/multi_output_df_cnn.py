@@ -10,6 +10,8 @@ from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv
 from src.util.hparam import model_compile_fit
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
@@ -37,9 +39,10 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
     os.makedirs(log_dir,                     exist_ok=True)
 
     # output_shape = csv_data.drop(columns='image_id').nunique().to_dict()
+    input_shape  = DatasetDF(test_train='train', fraction=0.0001, data_id=0).input_shape()
     output_shape = DatasetDF.output_shape()
     model = MultiOutputCNN(
-        input_shape=(137,236, 1),
+        input_shape=input_shape,
         output_shape=output_shape,
         **model_hparams,
     )
@@ -104,7 +107,7 @@ def log_stats_results(model_stats, logfilename):
 def submission_df(model, output_shape):
     submission = pd.DataFrame(columns=output_shape.keys())
     for data_id in range(0,4):
-        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # contains all test data
+        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # large datasets on submit, so loop
         predictions  = model.predict(test_dataset.X['train'])
         # noinspection PyTypeChecker
         submission = submission.append(
@@ -126,10 +129,10 @@ if __name__ == '__main__':
     #     "fraction":       0.1,
     # }
     model_hparams = {
-        "cnns_per_maxpool":   1,
-        "maxpool_layers":     5,
-        "dense_layers":       1,
-        "dense_units":       64,
+        "cnns_per_maxpool":   3,
+        "maxpool_layers":     4,
+        "dense_layers":       2,
+        "dense_units":      256,
         "regularization": False,
         "global_maxpool": False,
     }

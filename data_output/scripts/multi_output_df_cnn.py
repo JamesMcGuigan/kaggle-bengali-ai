@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 20:30:22+00:00
+##### 2020-03-14 18:18:46+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 77ab4ea [ahead 1] multi_output_df_cnn.py | refactor using hprams.model_compile_fit()
+##### * master 3883707 DatasetDF | give fraction<1 a random shuffle
 ##### 
-##### 77ab4eabfe54822ca5b79f8898ac24783c36e1a3
+##### 388370722a16c50c4cb82df4e2c21b1a3f1170c7
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -42,9 +42,9 @@ settings['hparam_defaults'] = {
         'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
     "timeout": {
-        'Localhost':   "110m",
-        'Interactive': "1m",
-        'Batch':       "110m",  # Timeout = 120 minutes | Submit exceeds timeout when using 115m
+        'Localhost':   "100m",
+        'Interactive': "5m",
+        'Batch':       "100m",  # Timeout = 120 minutes | allow 20 minutes for submit
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
 }
 
@@ -170,15 +170,19 @@ class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
 ##### START src/dataset/DatasetDF.py
 #####
 
+import math
+from time import sleep
+
 import gc
 import os
 from typing import AnyStr, Dict, Union
-
+import skimage.measure
 import glob2
 import numpy as np
 import pandas as pd
 from pandas import DataFrame, Series
 from sklearn.model_selection import train_test_split
+
 
 # from src.settings import settings
 
@@ -214,7 +218,7 @@ class DatasetDF():
                 'valid': None
             }
             if self.fraction < 1:
-                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle, random_state=0)
+                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
                 del discard
             if self.split != 0:
                 raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
@@ -229,21 +233,10 @@ class DatasetDF():
                 else:                     self.X[key] = np.concatenate([ self.X[key],  self.transform_X(value)  ])
                 self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]      ])
                 self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values ])
-            del X, raw; gc.collect()
+            del raw; gc.collect()
 
         self.Y = { key: self.transform_Y(value) for key,value in self.Y.items() }
         pass
-
-
-    # noinspection PyArgumentList
-    def transform_X(self, df: DataFrame) -> np.ndarray:
-        output = (
-            df.drop(columns='image_id', errors='ignore')
-              .values.astype('float16')
-              .reshape(-1, 137, 236, 1)
-              / 255.0                    # normalization caused localhost 16Gb RAM to be exceeded without float16
-        )
-        return output
 
 
     def transform_Y(self, df: DataFrame) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
@@ -265,6 +258,72 @@ class DatasetDF():
         return output
 
 
+    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/edit/run/29865909
+    # noinspection PyArgumentList
+    @classmethod
+    def transform_X(cls, train: DataFrame, resize=2, denoise=True, normalize=True, center=True, invert=True) -> np.ndarray:
+        train = (train.drop(columns='image_id', errors='ignore')
+                 .values.astype('uint8')            # unit8 for initial data processing
+                 .reshape(-1, 137, 236)             # 2D array for inline image processing
+        )
+        gc.collect(); sleep(1)
+
+        if isinstance(resize, bool) and resize == True:
+            resize = 2
+        if resize and resize != 1:                  # Reduce image size by 2x
+            # skimage.measure.block_reduce() default cast: int -> float64
+            # Use: np.array([train[i] for in]) helps reduce peak memory requirements
+            mean = lambda x, axis: np.mean(x, axis=axis, dtype=np.uint8)  # func_kwargs={} arg not in pip version
+            train = skimage.measure.block_reduce(train, (1, resize,resize), cval=0, func=mean)
+
+        if invert:                                         # Colors | 0 = black      | 255 = white
+            train = (255-train)                            # invert | 0 = background | 255 = line
+        if denoise:                                        # Set small pixel values to background 0
+            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
+            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
+        if center:
+            # NOTE: cls.crop_center_image assumes inverted
+            if not invert: train = (255-train)
+            train = np.array([
+                cls.crop_center_image(train[i,:,:])
+                for i in range(train.shape[0])
+            ])
+            if not invert: train = (255-train)
+
+        if normalize:
+            train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
+
+        train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
+
+        gc.collect(); sleep(1)
+        return train
+
+
+    # DOCS: https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
+    # NOTE: assumes inverted
+    @classmethod
+    def crop_center_image(cls, img, tol=0):
+        org_shape   = img.shape
+        img_cropped = cls.crop_image(img)
+        pad_x       = (org_shape[0] - img_cropped.shape[0])/2
+        pad_y       = (org_shape[1] - img_cropped.shape[1])/2
+        padding     = (
+            (math.floor(pad_x), math.ceil(pad_x)),
+            (math.floor(pad_y), math.ceil(pad_y))
+        )
+        img_center = np.pad(img_cropped, padding, 'constant', constant_values=0)
+        return img_center
+
+
+    # Source: https://codereview.stackexchange.com/questions/132914/crop-black-border-of-image-using-numpy
+    # This is the fast method that simply remove all empty rows/columns
+    # NOTE: assumes inverted
+    @classmethod
+    def crop_image(cls, img, tol=0):
+        mask = img > tol
+        return img[np.ix_(mask.any(1),mask.any(0))]
+
+
     def epoch_size(self):
         return self.X['train'].shape[0]
 
@@ -272,9 +331,6 @@ class DatasetDF():
     def input_shape(self):
         return self.X['train'].shape[1:]  # == (137, 236, 1) / 2
 
-
-    # def output_shape(self):
-    #     return self.__class__.output_shape(self.Y_field)
 
     @classmethod
     def output_shape(cls, Y_field=None):
@@ -483,9 +539,9 @@ def MultiOutputCNN(
     inputs = Input(shape=input_shape)
     x      = inputs
 
-    for cnn1 in range(0,maxpool_layers):
+    for cnn1 in range(1,maxpool_layers+1):
         for cnn2 in range(1, cnns_per_maxpool+1):
-            x = Conv2D( 32 * cnn2, kernel_size=(3, 3), padding='same', activation='relu')(x)
+            x = Conv2D( 32 * cnn1, kernel_size=(3, 3), padding='same', activation='relu')(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
         x = BatchNormalization()(x)
         x = Dropout(dropout)(x)
@@ -820,9 +876,10 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
     os.makedirs(log_dir,                     exist_ok=True)
 
     # output_shape = csv_data.drop(columns='image_id').nunique().to_dict()
+    input_shape  = DatasetDF(test_train='train', fraction=0.0001, data_id=0).input_shape()
     output_shape = DatasetDF.output_shape()
     model = MultiOutputCNN(
-        input_shape=(137,236, 1),
+        input_shape=input_shape,
         output_shape=output_shape,
         **model_hparams,
     )
@@ -887,7 +944,7 @@ def log_stats_results(model_stats, logfilename):
 def submission_df(model, output_shape):
     submission = pd.DataFrame(columns=output_shape.keys())
     for data_id in range(0,4):
-        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # contains all test data
+        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # large datasets on submit, so loop
         predictions  = model.predict(test_dataset.X['train'])
         # noinspection PyTypeChecker
         submission = submission.append(
@@ -909,10 +966,10 @@ if __name__ == '__main__':
     #     "fraction":       0.1,
     # }
     model_hparams = {
-        "cnns_per_maxpool":   1,
-        "maxpool_layers":     5,
-        "dense_layers":       1,
-        "dense_units":       64,
+        "cnns_per_maxpool":   3,
+        "maxpool_layers":     4,
+        "dense_layers":       2,
+        "dense_units":      256,
         "regularization": False,
         "global_maxpool": False,
     }
@@ -960,13 +1017,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-13 20:30:22+00:00
+##### 2020-03-14 18:18:46+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 77ab4ea [ahead 1] multi_output_df_cnn.py | refactor using hprams.model_compile_fit()
+##### * master 3883707 DatasetDF | give fraction<1 a random shuffle
 ##### 
-##### 77ab4eabfe54822ca5b79f8898ac24783c36e1a3
+##### 388370722a16c50c4cb82df4e2c21b1a3f1170c7
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py

@@ -1,10 +1,18 @@
 import inspect
 import types
-from typing import cast, Union, List, Dict
+from typing import Dict, List, Union, cast
 
 from tensorflow.keras import Input, Model, regularizers
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
-    GlobalMaxPooling2D
+from tensorflow.keras.layers import (
+    BatchNormalization,
+    Conv2D,
+    Dense,
+    Dropout,
+    Flatten,
+    GlobalMaxPooling2D,
+    MaxPooling2D,
+    )
+
 
 
 # noinspection DuplicatedCode
@@ -27,9 +35,9 @@ def MultiOutputCNN(
     inputs = Input(shape=input_shape)
     x      = inputs
 
-    for cnn1 in range(0,maxpool_layers):
+    for cnn1 in range(1,maxpool_layers+1):
         for cnn2 in range(1, cnns_per_maxpool+1):
-            x = Conv2D( 32 * cnn2, kernel_size=(3, 3), padding='same', activation='relu')(x)
+            x = Conv2D( 32 * cnn1, kernel_size=(3, 3), padding='same', activation='relu')(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
         x = BatchNormalization()(x)
         x = Dropout(dropout)(x)
