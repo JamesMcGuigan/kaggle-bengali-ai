@@ -148,9 +148,9 @@ if __name__ == '__main__':
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
-        # "fraction":      1.0,
+        "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
-        "loops":         2,
+        "loops":         4,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0

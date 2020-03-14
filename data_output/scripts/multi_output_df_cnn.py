@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-14 18:18:46+00:00
+##### 2020-03-14 19:44:38+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 3883707 DatasetDF | give fraction<1 a random shuffle
+##### * master c9ce142 [ahead 1] DatasetDF | improve image preprocsssing | np.mean(uint8) produces fragmented images
 ##### 
-##### 388370722a16c50c4cb82df4e2c21b1a3f1170c7
+##### c9ce142dfe092361e3b30664ffcec6e2dce5101e
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -171,20 +171,20 @@ class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
 #####
 
 import math
+import os
 from time import sleep
+from typing import AnyStr, Dict, Union
 
 import gc
-import os
-from typing import AnyStr, Dict, Union
-import skimage.measure
 import glob2
 import numpy as np
 import pandas as pd
+import skimage.measure
 from pandas import DataFrame, Series
 from sklearn.model_selection import train_test_split
 
-
 # from src.settings import settings
+
 
 
 class DatasetDF():
@@ -263,24 +263,31 @@ class DatasetDF():
     @classmethod
     def transform_X(cls, train: DataFrame, resize=2, denoise=True, normalize=True, center=True, invert=True) -> np.ndarray:
         train = (train.drop(columns='image_id', errors='ignore')
-                 .values.astype('uint8')            # unit8 for initial data processing
-                 .reshape(-1, 137, 236)             # 2D array for inline image processing
+                 .values.astype('uint8')                   # unit8 for initial data processing
+                 .reshape(-1, 137, 236)                    # 2D arrays for inline image processing
         )
         gc.collect(); sleep(1)
+
+        if invert:                                         # Colors | 0 = black      | 255 = white
+            train = (255-train)                            # invert | 0 = background | 255 = line
+
+        if denoise:                                        # Set small pixel values to background 0
+            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
+            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
 
         if isinstance(resize, bool) and resize == True:
             resize = 2
         if resize and resize != 1:                  # Reduce image size by 2x
-            # skimage.measure.block_reduce() default cast: int -> float64
-            # Use: np.array([train[i] for in]) helps reduce peak memory requirements
-            mean = lambda x, axis: np.mean(x, axis=axis, dtype=np.uint8)  # func_kwargs={} arg not in pip version
-            train = skimage.measure.block_reduce(train, (1, resize,resize), cval=0, func=mean)
+            # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
+            # Out of the different resize functions:
+            # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
+            # - np.median() produces the most accurate downsampling
+            # - np.max() produces an enhanced image with thicker lines (maybe slightly easier to read)
+            # - np.min() produces a  dehanced image with thiner lines (harder to read)
+            resize_fn = np.max if invert else np.min
+            cval      = 0      if invert else 255
+            train     = skimage.measure.block_reduce(train, (1, resize,resize), cval=cval, func=resize_fn)
 
-        if invert:                                         # Colors | 0 = black      | 255 = white
-            train = (255-train)                            # invert | 0 = background | 255 = line
-        if denoise:                                        # Set small pixel values to background 0
-            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
-            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
         if center:
             # NOTE: cls.crop_center_image assumes inverted
             if not invert: train = (255-train)
@@ -512,11 +519,19 @@ class CyclicLR(Callback):
 
 import inspect
 import types
-from typing import cast, Union, List, Dict
+from typing import Dict, List, Union, cast
 
 from tensorflow.keras import Input, Model, regularizers
-from tensorflow.keras.layers import Conv2D, MaxPooling2D, Dropout, Flatten, Dense, BatchNormalization, \
-    GlobalMaxPooling2D
+from tensorflow.keras.layers import (
+    BatchNormalization,
+    Conv2D,
+    Dense,
+    Dropout,
+    Flatten,
+    GlobalMaxPooling2D,
+    MaxPooling2D,
+    )
+
 
 
 # noinspection DuplicatedCode
@@ -849,6 +864,8 @@ import pandas as pd
 # from src.util.csv import df_to_submission_csv
 # from src.util.hparam import model_compile_fit
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
@@ -985,9 +1002,9 @@ if __name__ == '__main__':
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
-        # "fraction":      1.0,
+        "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
-        "loops":         2,
+        "loops":         4,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1017,13 +1034,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-14 18:18:46+00:00
+##### 2020-03-14 19:44:38+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 3883707 DatasetDF | give fraction<1 a random shuffle
+##### * master c9ce142 [ahead 1] DatasetDF | improve image preprocsssing | np.mean(uint8) produces fragmented images
 ##### 
-##### 388370722a16c50c4cb82df4e2c21b1a3f1170c7
+##### c9ce142dfe092361e3b30664ffcec6e2dce5101e
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
