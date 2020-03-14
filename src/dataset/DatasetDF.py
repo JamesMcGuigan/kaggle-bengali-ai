@@ -91,24 +91,31 @@ class DatasetDF():
     @classmethod
     def transform_X(cls, train: DataFrame, resize=2, denoise=True, normalize=True, center=True, invert=True) -> np.ndarray:
         train = (train.drop(columns='image_id', errors='ignore')
-                 .values.astype('uint8')            # unit8 for initial data processing
-                 .reshape(-1, 137, 236)             # 2D array for inline image processing
+                 .values.astype('uint8')                   # unit8 for initial data processing
+                 .reshape(-1, 137, 236)                    # 2D arrays for inline image processing
         )
         gc.collect(); sleep(1)
+
+        if invert:                                         # Colors | 0 = black      | 255 = white
+            train = (255-train)                            # invert | 0 = background | 255 = line
+
+        if denoise:                                        # Set small pixel values to background 0
+            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
+            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
 
         if isinstance(resize, bool) and resize == True:
             resize = 2
         if resize and resize != 1:                  # Reduce image size by 2x
-            # skimage.measure.block_reduce() default cast: int -> float64
-            # Use: np.array([train[i] for in]) helps reduce peak memory requirements
-            mean = lambda x, axis: np.mean(x, axis=axis, dtype=np.uint8)  # func_kwargs={} arg not in pip version
-            train = skimage.measure.block_reduce(train, (1, resize,resize), cval=0, func=mean)
+            # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
+            # Out of the different resize functions:
+            # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
+            # - np.median() produces the most accurate downsampling
+            # - np.max() produces an enhanced image with thicker lines (maybe slightly easier to read)
+            # - np.min() produces a  dehanced image with thiner lines (harder to read)
+            resize_fn = np.max if invert else np.min
+            cval      = 0      if invert else 255
+            train     = skimage.measure.block_reduce(train, (1, resize,resize), cval=cval, func=resize_fn)
 
-        if invert:                                         # Colors | 0 = black      | 255 = white
-            train = (255-train)                            # invert | 0 = background | 255 = line
-        if denoise:                                        # Set small pixel values to background 0
-            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
-            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
         if center:
             # NOTE: cls.crop_center_image assumes inverted
             if not invert: train = (255-train)
