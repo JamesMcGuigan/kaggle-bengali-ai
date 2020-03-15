@@ -20,4 +20,5 @@ logs/
 ### Data
 input/*.zip
 input/bengaliai-cv19/
+input_features/
 !*/input/*.dvc

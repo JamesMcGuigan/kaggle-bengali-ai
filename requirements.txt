@@ -74,9 +74,8 @@ seaborn==0.10.0           # via -r requirements.in
 simplejson==3.17.0        # via -r requirements.in
 six==1.14.0               # via absl-py, astroid, cycler, google-auth, google-pasta, grpcio, h5py, keras-preprocessing, protobuf, pyarrow, python-dateutil, tensorboard, tensorflow, traitlets
 sklearn==0.0              # via -r requirements.in
-tensorboard==2.1.1        # via -r requirements.in, tensorflow, tensorflow-gpu
-tensorflow-estimator==2.1.0  # via tensorflow, tensorflow-gpu
-tensorflow-gpu==2.1.0     # via -r requirements.in
+tensorboard==2.1.1        # via -r requirements.in, tensorflow
+tensorflow-estimator==2.1.0  # via tensorflow
 tensorflow==2.1.0         # via -r requirements.in
 termcolor==1.1.0          # via tensorflow
 toolz==0.10.0             # via cytoolz

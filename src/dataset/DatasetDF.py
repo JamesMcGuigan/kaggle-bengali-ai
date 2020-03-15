@@ -115,21 +115,20 @@ class DatasetDF():
             # Out of the different resize functions:
             # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
             # - np.median() produces the most accurate downsampling
-            # - np.max() produces an enhanced image with thicker lines (maybe slightly easier to read)
-            # - np.min() produces a  dehanced image with thiner lines (harder to read)
-            resize_fn = np.max if invert else np.min
-            cval      = 0      if invert else 255
+            # - np.max() produces an image with thicker lines - occasionally produces bounding boxes
+            # - np.min() produces a  image with thiner  lines (harder to read)
+            resize_fn = np.median  # np.max if invert else np.min
 
             # BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
             train = np.array([
-                skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=cval, func=resize_fn)
+                skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=0, func=resize_fn)
                 for i in range(train.shape[0])
             ])
 
         if center:
             # NOTE: cls.crop_center_image assumes inverted
             train = np.array([
-                cls.crop_center_image(train[i,:,:])
+                cls.crop_center_image(train[i,:,:], cval=0)
                 for i in range(train.shape[0])
             ])
 
@@ -149,7 +148,7 @@ class DatasetDF():
     # DOCS: https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
     # NOTE: assumes inverted
     @classmethod
-    def crop_center_image(cls, img, tol=0):
+    def crop_center_image(cls, img, cval=0, tol=0):
         org_shape   = img.shape
         img_cropped = cls.crop_image(img)
         pad_x       = (org_shape[0] - img_cropped.shape[0])/2
@@ -158,7 +157,7 @@ class DatasetDF():
             (math.floor(pad_x), math.ceil(pad_x)),
             (math.floor(pad_y), math.ceil(pad_y))
         )
-        img_center = np.pad(img_cropped, padding, 'constant', constant_values=0)
+        img_center = np.pad(img_cropped, padding, 'constant', constant_values=cval)
         return img_center
 
 

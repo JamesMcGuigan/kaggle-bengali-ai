@@ -25,6 +25,7 @@ numba
 matplotlib
 seaborn
 pydot
+# opencv-python          # brew install opencv
 
 
 ### Utilities

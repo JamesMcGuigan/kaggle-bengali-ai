@@ -173,7 +173,7 @@ if __name__ == '__main__':
         train_hparams['loops']    = 1
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
 
-    argparse_from_dicts([train_hparams, model_hparams])
+    argparse_from_dicts([train_hparams, model_hparams], inplace=True)
 
 
     pipeline_name     = "multi_output_df_cnn"

@@ -44,6 +44,7 @@ settings['verbose'] = {
 if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
     settings['dir'] = {
         "data":        "../input/bengaliai-cv19",
+        "features":    "./input_features/bengaliai-cv19/",
         "models":      "./models",
         "submissions": "./",
         "logs":        "./logs",
@@ -51,6 +52,7 @@ if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 else:
     settings['dir'] = {
         "data":        "./input/bengaliai-cv19",
+        "features":    "./input_features/bengaliai-cv19/",
         "models":      "./data_output/models",
         "submissions": "./data_output/submissions",
         "logs":        "./logs",
