@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-15 00:07:41+00:00
+##### 2020-03-15 00:26:35+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 08c6b50 multi_output_df_cnn | load pre-existing kaggle weights file
+##### * master 80ad108 [ahead 1] DatasetDF | BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
 ##### 
-##### 08c6b5033010f6e89cedb6a9d4978f8732e6c958
+##### 80ad10895e1771c1cd66de27d7263f2f722c65d1
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -284,7 +284,12 @@ class DatasetDF():
             # - np.min() produces a  dehanced image with thiner lines (harder to read)
             resize_fn = np.max if invert else np.min
             cval      = 0      if invert else 255
-            train     = skimage.measure.block_reduce(train, (1, resize,resize), cval=cval, func=resize_fn)
+
+            # BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
+            train = np.array([
+                skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=cval, func=resize_fn)
+                for i in range(train.shape[0])
+            ])
 
         if center:
             # NOTE: cls.crop_center_image assumes inverted
@@ -1048,13 +1053,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-15 00:07:41+00:00
+##### 2020-03-15 00:26:35+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 08c6b50 multi_output_df_cnn | load pre-existing kaggle weights file
+##### * master 80ad108 [ahead 1] DatasetDF | BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
 ##### 
-##### 08c6b5033010f6e89cedb6a9d4978f8732e6c958
+##### 80ad10895e1771c1cd66de27d7263f2f722c65d1
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
