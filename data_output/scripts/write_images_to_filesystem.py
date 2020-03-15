@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
 ##### 
-##### 2020-03-15 19:07:26+00:00
+##### 2020-03-15 19:08:18+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 5c8da87 [ahead 3] kaggle_compile.py | ./data_output/scripts/write_images_to_filesystem.py
+##### * master 3efba5f [ahead 4] kaggle_compile.py | ./data_output/scripts/write_images_to_filesystem.py
 ##### 
-##### 5c8da873b06614fd5aa786c4a8de708fcd988c48
+##### 3efba5fc20b818b749cc59bae812c4784035a72a
 ##### 
 
 #####
@@ -440,12 +440,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
 ##### 
-##### 2020-03-15 19:07:26+00:00
+##### 2020-03-15 19:08:18+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 5c8da87 [ahead 3] kaggle_compile.py | ./data_output/scripts/write_images_to_filesystem.py
+##### * master 3efba5f [ahead 4] kaggle_compile.py | ./data_output/scripts/write_images_to_filesystem.py
 ##### 
-##### 5c8da873b06614fd5aa786c4a8de708fcd988c48
+##### 3efba5fc20b818b749cc59bae812c4784035a72a
 ##### 
