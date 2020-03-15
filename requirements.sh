@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Utility script to automate python virtualenv creation/update from ./requirements.in 
+# Utility script to automate python virtualenv creation/update from ./requirements.in
 # Input:  ./requirements.in
 # Output: ./requirements.txt + ./venv/ + ./venv_windows/
 #
@@ -77,7 +77,7 @@ for OS in UNIX WINDOWS; do
     if [[ $OS == 'UNIX' ]]; then
         pip install --upgrade pip pip-tools
         timeout 5 pip-compile || pip-compile -v  # --generate-hashes
-        pip install -r ./requirements.txt
+        pip install -r ./requirements.txt || cat ./requirements.txt | perl -p -e 's/\s*#.*$//g' | sed '/^\s*$/d' | xargs -d'\n' -L1 -t pip install
         pip-sync
     fi;
     if [[ $OS == 'WINDOWS' ]]; then
