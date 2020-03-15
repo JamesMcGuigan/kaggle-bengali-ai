@@ -1,5 +1,6 @@
 import os
 
+import glob2
 import numpy as np
 import pandas as pd
 
@@ -46,8 +47,23 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
         output_shape=output_shape,
         **model_hparams,
     )
+
+    # Load Pre-existing weights
     if os.path.exists( model_file ):
-        model.load_weights( model_file )
+        try:
+            model.load_weights( model_file )
+            print('Loaded Weights: ', model_file)
+        except Exception as exception: print('exception', exception)
+
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        load_models = glob2.glob(f'../input/**/{model_file}')
+        for load_model in load_models:
+            try:
+                model.load_weights( load_model )
+                print('Loaded Weights: ', load_model)
+                break
+            except Exception as exception: print('exception', exception)
+
     model.summary()
 
     model_stats = []
@@ -150,7 +166,7 @@ if __name__ == '__main__':
         # "batch_size":    128,
         "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
-        "loops":         4,
+        "loops":         3,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
