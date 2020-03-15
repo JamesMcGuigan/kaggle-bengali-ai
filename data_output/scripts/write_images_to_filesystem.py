@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 
-#####
+##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
-#####
-##### 2020-03-15 19:08:18+00:00
-#####
+##### 
+##### 2020-03-15 19:14:05+00:00
+##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
-#####
-##### * master 3efba5f [ahead 4] kaggle_compile.py | ./data_output/scripts/write_images_to_filesystem.py
-#####
-##### 3efba5fc20b818b749cc59bae812c4784035a72a
-#####
+##### 
+##### * master b72fc1c [ahead 1] preprocessing | write_images_to_filesystem | fix verbose
+##### 
+##### b72fc1cb7d89fda2329d7f13e8271e71b8ada636
+##### 
 
 #####
 ##### START src/settings.py
@@ -386,7 +386,7 @@ def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, ver
             if existing_images == expected_images: continue
 
         for parquet_filename in parquet_filenames:
-            if verbose:
+            if verbose >= 2:
                 print(f'write_images_to_filesystem({only or ""}) - reading:  ', parquet_filename)
 
             dataframe  = pd.read_parquet(parquet_filename)
@@ -401,10 +401,10 @@ def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, ver
 
                 matplotlib.image.imsave(image_filename, image_data[index].squeeze(), cmap='gray')
                 image_count += 1
-                if verbose == 1:
+                if verbose:
                     print(f'write_images_to_filesystem({only or ""}) - wrote:    ', image_filename)
 
-    if verbose:
+    if verbose >= 1:
         print( f'write_images_to_filesystem({only or ""}) - wrote: {image_count} files in: {round(time.time() - time_start,2)}s')
 
 
@@ -437,15 +437,15 @@ if __name__ == '__main__':
 ##### END   src/preprocessing/write_images_to_filesystem.py
 #####
 
-#####
+##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
-#####
-##### 2020-03-15 19:08:18+00:00
-#####
+##### 
+##### 2020-03-15 19:14:05+00:00
+##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
-#####
-##### * master 3efba5f [ahead 4] kaggle_compile.py | ./data_output/scripts/write_images_to_filesystem.py
-#####
-##### 3efba5fc20b818b749cc59bae812c4784035a72a
-#####
+##### 
+##### * master b72fc1c [ahead 1] preprocessing | write_images_to_filesystem | fix verbose
+##### 
+##### b72fc1cb7d89fda2329d7f13e8271e71b8ada636
+##### 
