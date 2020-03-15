@@ -9,14 +9,14 @@ import matplotlib.image
 import pandas as pd
 from pyarrow.parquet import ParquetFile
 
-from src.dataset import DatasetDF
+from src.dataset.DatasetDF import DatasetDF
 from src.settings import settings
+from src.util.argparse import argparse_from_dicts
+
+
+
 # Entries into the Bengali AI Competition often suffer from out of memory errors when reading from a dataframe
 # Quick and dirty solution is to write data as images to a directory and use ImageDataGenerator.flow_from_directory()
-from src.util.argparse import argparse_from_dict, argparse_from_dicts
-
-
-
 def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, verbose=False, force=False, transform_args={} ):
     transform_defaults = { 'resize': 2, 'denoise': True, 'center': True, 'invert': True, 'normalize': False }
     transform_args     = { **transform_defaults, **transform_args }
