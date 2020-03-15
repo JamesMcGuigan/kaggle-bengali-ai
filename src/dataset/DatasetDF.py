@@ -114,7 +114,12 @@ class DatasetDF():
             # - np.min() produces a  dehanced image with thiner lines (harder to read)
             resize_fn = np.max if invert else np.min
             cval      = 0      if invert else 255
-            train     = skimage.measure.block_reduce(train, (1, resize,resize), cval=cval, func=resize_fn)
+
+            # BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
+            train = np.array([
+                skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=cval, func=resize_fn)
+                for i in range(train.shape[0])
+            ])
 
         if center:
             # NOTE: cls.crop_center_image assumes inverted
