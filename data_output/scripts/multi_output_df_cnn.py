@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-14 19:44:38+00:00
+##### 2020-03-15 00:07:41+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master c9ce142 [ahead 1] DatasetDF | improve image preprocsssing | np.mean(uint8) produces fragmented images
+##### * master 08c6b50 multi_output_df_cnn | load pre-existing kaggle weights file
 ##### 
-##### c9ce142dfe092361e3b30664ffcec6e2dce5101e
+##### 08c6b5033010f6e89cedb6a9d4978f8732e6c958
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
@@ -41,11 +41,9 @@ settings['hparam_defaults'] = {
         'Interactive': 1,
         'Batch':       1,
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
-    "timeout": {
-        'Localhost':   "100m",
-        'Interactive': "5m",
-        'Batch':       "100m",  # Timeout = 120 minutes | allow 20 minutes for submit
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
+
+    # Timeout = 120 minutes | allow 30 minutes for testing submit | TODO: unsure of KAGGLE_KERNEL_RUN_TYPE on Submit
+    "timeout": "5m" if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == "Interactive" else "90m"
 }
 
 settings['verbose'] = {
@@ -854,6 +852,7 @@ def model_compile_fit(
 
 import os
 
+import glob2
 import numpy as np
 import pandas as pd
 
@@ -900,8 +899,23 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
         output_shape=output_shape,
         **model_hparams,
     )
+
+    # Load Pre-existing weights
     if os.path.exists( model_file ):
-        model.load_weights( model_file )
+        try:
+            model.load_weights( model_file )
+            print('Loaded Weights: ', model_file)
+        except Exception as exception: print('exception', exception)
+
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        load_models = glob2.glob(f'../input/**/{model_file}')
+        for load_model in load_models:
+            try:
+                model.load_weights( load_model )
+                print('Loaded Weights: ', load_model)
+                break
+            except Exception as exception: print('exception', exception)
+
     model.summary()
 
     model_stats = []
@@ -1004,7 +1018,7 @@ if __name__ == '__main__':
         # "batch_size":    128,
         "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
-        "loops":         4,
+        "loops":         3,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1034,13 +1048,13 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-14 19:44:38+00:00
+##### 2020-03-15 00:07:41+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master c9ce142 [ahead 1] DatasetDF | improve image preprocsssing | np.mean(uint8) produces fragmented images
+##### * master 08c6b50 multi_output_df_cnn | load pre-existing kaggle weights file
 ##### 
-##### c9ce142dfe092361e3b30664ffcec6e2dce5101e
+##### 08c6b5033010f6e89cedb6a9d4978f8732e6c958
 ##### 
 ##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
