@@ -9,10 +9,9 @@ import matplotlib.image
 import pandas as pd
 from pyarrow.parquet import ParquetFile
 
-from src.dataset.DatasetDF import DatasetDF
+from src.dataset.transforms import Transforms
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
-
 
 
 # Entries into the Bengali AI Competition often suffer from out of memory errors when reading from a dataframe
@@ -48,7 +47,7 @@ def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, ver
 
             dataframe  = pd.read_parquet(parquet_filename)
             image_ids  = dataframe['image_id'].tolist()
-            image_data = DatasetDF.transform_X(dataframe, **transform_args )
+            image_data = Transforms.transform_X(dataframe, **transform_args )
 
             for index, image_id in enumerate(image_ids):
                 image_filename = f'{image_dir}/{image_id}.{ext}'
