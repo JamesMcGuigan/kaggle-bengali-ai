@@ -13,7 +13,7 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler,
 from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
 from src.settings import settings
-from vendor.CLR.clr_callback import CyclicLR
+from src.vendor.CLR.clr_callback import CyclicLR
 
 
 def min_lr(hparams):
