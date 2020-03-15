@@ -86,7 +86,7 @@ class DatasetDF():
         return output
 
 
-    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/edit/run/29865909
+    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
     # noinspection PyArgumentList
     @classmethod
     def transform_X(cls, train: DataFrame, resize=2, denoise=True, normalize=True, center=True, invert=True) -> np.ndarray:
@@ -96,12 +96,17 @@ class DatasetDF():
         )
         gc.collect(); sleep(1)
 
-        if invert:                                         # Colors | 0 = black      | 255 = white
-            train = (255-train)                            # invert | 0 = background | 255 = line
 
-        if denoise:                                        # Set small pixel values to background 0
-            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
-            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
+        # Invert for processing
+        # Colors   |   0 = black      | 255 = white
+        # invert   |   0 = background | 255 = line
+        # original | 255 = background |   0 = line
+        train = (255-train)
+
+        if denoise:
+            # Rescale lines to maximum brightness, and set background values (less than 2x mean()) to 0
+            train = np.array([ train[i] + (255-train[i].max())              for i in range(train.shape[0]) ])
+            train = np.array([ train[i] * (train[i] >= np.mean(train[i])*2) for i in range(train.shape[0]) ])
 
         if isinstance(resize, bool) and resize == True:
             resize = 2
@@ -123,15 +128,17 @@ class DatasetDF():
 
         if center:
             # NOTE: cls.crop_center_image assumes inverted
-            if not invert: train = (255-train)
             train = np.array([
                 cls.crop_center_image(train[i,:,:])
                 for i in range(train.shape[0])
             ])
-            if not invert: train = (255-train)
+
+        # Un-invert if invert==False
+        if not invert: train = (255-train)
 
         if normalize:
             train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
+
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
