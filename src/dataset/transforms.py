@@ -6,10 +6,10 @@ from typing import AnyStr, Dict, Union, List
 import numpy as np
 import pandas as pd
 import skimage.measure
+from memory_profiler import profile
 from pandas import DataFrame, Series
 
 from src.settings import settings
-
 
 class Transforms():
     csv_filename         = f"{settings['dir']['data']}/train.csv"
@@ -18,6 +18,7 @@ class Transforms():
 
 
     @classmethod
+    #@profile
     def transform_Y(cls, df: DataFrame, Y_field: Union[List[str],str] = None) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
         ### Profiler: 0.2% of DatasetDF() runtime
         labels = df['image_id'].values
@@ -40,6 +41,7 @@ class Transforms():
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
     # noinspection PyArgumentList
     @classmethod
+    #@profile
     def transform_X(cls,
                     train: DataFrame,
                     resize=2,
@@ -54,8 +56,6 @@ class Transforms():
                  .values.astype('uint8')                   # unit8 for initial data processing
                  .reshape(-1, 137, 236)                    # 2D arrays for inline image processing
                 )
-        gc.collect(); sleep(1)
-
         # Colors   |   0 = black      | 255 = white
         # invert   |   0 = background | 255 = line
         # original | 255 = background |   0 = line
@@ -88,12 +88,14 @@ class Transforms():
 
 
     @classmethod
+    #@profile
     def invert(cls, train: np.ndarray) -> np.ndarray:
         ### Profiler: 0.5% of DatasetDF() runtime
         return (255-train)
 
 
     @classmethod
+    #@profile
     def normalize(cls, train: np.ndarray) -> np.ndarray:
         ### Profiler: 15.4% of DatasetDF() runtime
         train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
@@ -101,6 +103,7 @@ class Transforms():
 
 
     @classmethod
+    #@profile
     def denoise(cls, train: np.ndarray) -> np.ndarray:
         ### Profiler: 0.3% of DatasetDF() runtime
         train = train * (train >= 42)  # 42 is the maximum mean
@@ -108,6 +111,7 @@ class Transforms():
 
 
     @classmethod
+    #@profile
     def rescale(cls, train: np.ndarray) -> np.ndarray:
         ### Profiler: 3.4% of DatasetDF() runtime
         ### Rescale lines to maximum brightness, and set background values (less than 2x mean()) to 0
@@ -127,6 +131,7 @@ class Transforms():
 
 
     @classmethod
+    #@profile
     def resize(cls, train: np.ndarray, resize: int) -> np.ndarray:
         ### Profiler: 29% of DatasetDF() runtime  (37% with [for in] loop)
         # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
@@ -153,6 +158,7 @@ class Transforms():
 
 
     @classmethod
+    #@profile
     def center(cls, train: np.ndarray) -> np.ndarray:
         ### Profiler: 12.3% of DatasetDF() runtime
         ### NOTE: cls.crop_center_image assumes inverted

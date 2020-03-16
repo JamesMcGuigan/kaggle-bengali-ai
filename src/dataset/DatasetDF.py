@@ -5,6 +5,7 @@ from typing import AnyStr, Dict, Union
 import glob2
 import numpy as np
 import pandas as pd
+from memory_profiler import profile
 from sklearn.model_selection import train_test_split
 
 from src.dataset.transforms import Transforms
@@ -14,6 +15,8 @@ from src.settings import settings
 class DatasetDF():
     csv_data = Transforms.csv_data
 
+
+    #@profile
     def __init__(self,
                  test_train   = 'train',
                  data_id: Union[str,int] = '0',
@@ -22,6 +25,8 @@ class DatasetDF():
                  shuffle      = True,
                  split: float = 0.1,
         ):
+        gc.collect()
+
         self.test_train = test_train
         self.data_id    = data_id
         self.Y_field    = Y_field
@@ -52,9 +57,9 @@ class DatasetDF():
             for key, value in raw.items():
                 X = Transforms.transform_X(value)
                 if len(self.X[key]) == 0: self.X[key] = X
-                else:                     self.X[key] = np.concatenate([ self.X[key],  Transforms.transform_X(value)  ])
-                self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]      ])
-                self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values ])
+                else:                     self.X[key] = np.concatenate([ self.X[key], X ])
+                self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]       ])
+                self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values  ])
             del raw; gc.collect()
 
         self.Y = { key: Transforms.transform_Y(value) for key,value in self.Y.items() }
@@ -85,18 +90,23 @@ class DatasetDF():
 
 if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
     ### NOTE: loading all datasets at once exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
-    ### Runtime: 3m 12s
-    for data_id in range(0,1):
-        for test_train in ['test', 'train']:
-            dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
-            Y_shape = {}
-            for key, Y in dataset.Y.items():
-                if isinstance(Y, dict): Y_shape[key] = { k:v.shape for k,v in Y.items() }
-                else:                   Y_shape[key] = Y.shape
+    ### Runtime: 3m 12s - for in range(0,4)
+    ### $ find ./src/ -name '*.py' | xargs perl -p -i -e 's/#@profile/@profile/'
+    ### $ time python3 -m memory_profiler src/dataset/DatasetDF.py | less
+    #@profile()
+    def main():
+        for data_id in range(0,4):
+            for test_train in ['test', 'train']:
+                dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
+                Y_shape = {}
+                for key, Y in dataset.Y.items():
+                    if isinstance(Y, dict): Y_shape[key] = { k:v.shape for k,v in Y.items() }
+                    else:                   Y_shape[key] = Y.shape
 
-            print(f"{test_train}:{data_id} dataset.image_filenames", dataset.parquet_filenames)
-            print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
-            print(f"{test_train}:{data_id} dataset.Y", Y_shape)
-            print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
-            print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
-            print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
+                print(f"{test_train}:{data_id} dataset.image_filenames", dataset.parquet_filenames)
+                print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
+                print(f"{test_train}:{data_id} dataset.Y", Y_shape)
+                print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
+                print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
+                print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
+    main()

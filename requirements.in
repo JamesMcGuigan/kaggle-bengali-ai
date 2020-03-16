@@ -29,6 +29,7 @@ pydot
 
 
 ### Utilities
+memory_profiler
 glob2
 humanize
 pyyaml
