@@ -16,6 +16,7 @@ from src.util.argparse import argparse_from_dicts
 
 # Entries into the Bengali AI Competition often suffer from out of memory errors when reading from a dataframe
 # Quick and dirty solution is to write data as images to a directory and use ImageDataGenerator.flow_from_directory()
+# noinspection PyDefaultArgument
 def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, verbose=False, force=False, transform_args={} ):
     transform_defaults = { 'resize': 2, 'denoise': True, 'center': True, 'invert': True, 'normalize': False }
     transform_args     = { **transform_defaults, **transform_args }
@@ -75,6 +76,7 @@ if __name__ == '__main__':
     }
     transform_args = {
         'resize':    2,
+        'rescale':   1,
         'denoise':   1,
         'center':    1,
         'invert':    1,

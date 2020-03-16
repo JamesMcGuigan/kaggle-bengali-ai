@@ -84,13 +84,19 @@ class DatasetDF():
 
 
 if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-    # NOTE: loading all datasets exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
-    for data_id in range(0,4):
+    ### NOTE: loading all datasets at once exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
+    ### Runtime: 3m 12s
+    for data_id in range(0,1):
         for test_train in ['test', 'train']:
             dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
+            Y_shape = {}
+            for key, Y in dataset.Y.items():
+                if isinstance(Y, dict): Y_shape[key] = { k:v.shape for k,v in Y.items() }
+                else:                   Y_shape[key] = Y.shape
+
             print(f"{test_train}:{data_id} dataset.image_filenames", dataset.parquet_filenames)
             print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
-            print(f"{test_train}:{data_id} dataset.Y",               { key: df.shape for key, df in dataset.Y.items() })
+            print(f"{test_train}:{data_id} dataset.Y", Y_shape)
             print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
             print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
             print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
