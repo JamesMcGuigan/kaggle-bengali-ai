@@ -1,6 +1,5 @@
 import gc
 import math
-from time import sleep
 from typing import AnyStr, Dict, Union, List
 
 import numpy as np
@@ -83,7 +82,7 @@ class Transforms():
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
-        gc.collect(); sleep(1)
+        gc.collect(); # sleep(1)
         return train
 
 
