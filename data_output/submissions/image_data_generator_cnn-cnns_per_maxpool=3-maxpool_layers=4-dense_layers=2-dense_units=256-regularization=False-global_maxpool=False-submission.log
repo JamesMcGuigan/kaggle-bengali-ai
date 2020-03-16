@@ -1,28 +1,28 @@
 ------------------------------
 Completed
 model_hparams: {'cnns_per_maxpool': 3, 'maxpool_layers': 4, 'dense_layers': 2, 'dense_units': 256, 'regularization': False, 'global_maxpool': False}
-train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1, 'patience': 10, 'loops': 3, 'timeout': '1m', 'best_only': True}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1, 'patience': 10, 'loops': 3, 'timeout': '90m', 'best_only': True}
 {
-    "loss": "0.5429436471400212",
-    "grapheme_root_loss": "0.3761888",
-    "vowel_diacritic_loss": "0.18045169",
-    "consonant_diacritic_loss": "0.16777757",
-    "grapheme_loss": "0.66445583",
-    "grapheme_root_accuracy": "0.9044578",
-    "vowel_diacritic_accuracy": "0.95031327",
-    "consonant_diacritic_accuracy": "0.9502135",
-    "grapheme_accuracy": "0.8641098",
-    "val_loss": "0.46646324338821266",
-    "val_grapheme_root_loss": "0.4245805",
-    "val_vowel_diacritic_loss": "0.17638539",
-    "val_consonant_diacritic_loss": "0.11531913",
-    "val_grapheme_loss": "0.5341",
-    "val_grapheme_root_accuracy": "0.9169471",
-    "val_vowel_diacritic_accuracy": "0.9689904",
-    "val_consonant_diacritic_accuracy": "0.9685096",
-    "val_grapheme_accuracy": "0.89537257",
+    "loss": "0.4541465899786588",
+    "grapheme_root_loss": "0.35938424",
+    "vowel_diacritic_loss": "0.15488109",
+    "consonant_diacritic_loss": "0.14604424",
+    "grapheme_loss": "0.5385302",
+    "grapheme_root_accuracy": "0.9145402",
+    "vowel_diacritic_accuracy": "0.95970607",
+    "consonant_diacritic_accuracy": "0.9596861",
+    "grapheme_accuracy": "0.88948125",
+    "val_loss": "0.33851965963840486",
+    "val_grapheme_root_loss": "0.31283692",
+    "val_vowel_diacritic_loss": "0.08741381",
+    "val_consonant_diacritic_loss": "0.08379422",
+    "val_grapheme_loss": "0.38964072",
+    "val_grapheme_root_accuracy": "0.9340117",
+    "val_vowel_diacritic_accuracy": "0.98049253",
+    "val_consonant_diacritic_accuracy": "0.978325",
+    "val_grapheme_accuracy": "0.91998315",
     "lr": "0.001",
-    "time": "161",
-    "epochs": "1"
+    "time": "5109",
+    "epochs": "37"
 }
 ------------------------------
