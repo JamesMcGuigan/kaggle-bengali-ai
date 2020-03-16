@@ -16,6 +16,10 @@ from src.settings import settings
 from src.vendor.CLR.clr_callback import CyclicLR
 
 
+def hparam_key(hparams):
+    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
+
+
 def min_lr(hparams):
     # tensorboard --logdir logs/convergence_search/min_lr-optimized_scheduler-random-scheduler/ --reload_multifile=true
     # There is a high degree of randomness in this parameter, so it is hard to distinguish from statistical noise

@@ -9,19 +9,13 @@ from src.models.MultiOutputCNN import MultiOutputCNN
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv
-from src.util.hparam import model_compile_fit
-
-
+from src.util.hparam import model_compile_fit, hparam_key
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
 # https://stackoverflow.com/questions/34199233/how-to-prevent-tensorflow-from-allocating-the-totality-of-a-gpu-memory
 # [ tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices('GPU') ]
-
-
-def hparam_key(hparams):
-    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
 
 
 def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
