@@ -15,7 +15,8 @@ from src.util.csv import df_to_submission_csv, submission_df
 from src.util.hparam import hparam_key, model_compile, model_stats_from_history, callbacks
 from src.util.logs import log_model_stats
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 
 def image_data_generator_application(train_hparams, model_hparams, pipeline_name):
@@ -128,7 +129,7 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
     history = model.fit(
         generators['train'],
         validation_data = generators['valid'],
-        epochs           = 999,
+        epochs           = 30,
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
         verbose          = 2,
@@ -154,11 +155,8 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "split":         0.2,
-        "batch_size":    128,   # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM
-        "fraction":      1,     # Reduce memory overhead, but do 4 loops
+        "batch_size":    32,    # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM
         "patience":      10,
-        "loops":         3,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
