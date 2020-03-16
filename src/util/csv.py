@@ -6,27 +6,32 @@ import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-from src.dataset.DatasetDF import DatasetDF
-
-
 ### Predict Output Submssion
+from src.dataset.ParquetImageDataGenerator import ParquetImageDataGenerator
+from src.dataset.Transforms import Transforms
+from src.settings import settings
+
+
 def submission_df(model, output_shape):
     gc.collect(); sleep(5)
 
+    # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
     submission = pd.DataFrame(columns=output_shape.keys())
-    for data_id in range(0,4):  # large datasets on submit, so loop
-        test_dataset = DatasetDF(
-            test_train='test',
-            data_id=data_id,
-            transform_X_args={ "normalize": True }
-        )
-        predictions  = model.predict(test_dataset.X['train'])
+    for cache in ParquetImageDataGenerator.cache_generator(
+        f"{settings['dir']['data']}/test_image_data_*.parquet",
+        reads_per_file = 3,
+        resamples      = 1,
+        shuffle        = False,
+        infinite       = False,
+    ):
+        X = Transforms.transform_X(cache, normalize=True)
+        predictions = model.predict(X)
         # noinspection PyTypeChecker
         submission = submission.append(
             pd.DataFrame({
                 key: np.argmax( predictions[index], axis=-1 )
                 for index, key in enumerate(output_shape.keys())
-            }, index=test_dataset.ID['train'])
+            }, index=cache['image_id'])
         )
     return submission
 

@@ -7,7 +7,7 @@ from pyarrow.parquet import ParquetFile
 
 from src.dataset.DatasetDF import DatasetDF
 from src.dataset.ParquetImageDataGenerator import ParquetImageDataGenerator
-from src.dataset.transforms import Transforms
+from src.dataset.Transforms import Transforms
 from src.models.MultiOutputCNN import MultiOutputCNN
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts

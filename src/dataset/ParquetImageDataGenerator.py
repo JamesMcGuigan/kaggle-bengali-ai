@@ -53,7 +53,6 @@ class ParquetImageDataGenerator(ImageDataGenerator):
                 transform_X_args=transform_X_args,
                 transform_Y=transform_Y,
                 transform_Y_args=transform_Y_args,
-                batch_size=batch_size,
                 reads_per_file=reads_per_file,
                 resamples=resamples,
                 shuffle=shuffle,
@@ -81,15 +80,13 @@ class ParquetImageDataGenerator(ImageDataGenerator):
             transform_X_args: {},
             transform_Y:      Callable,
             transform_Y_args: {},
-            batch_size      = 128,
-            reads_per_file  = 2,
+            reads_per_file  = 3,
             resamples       = 1,
             shuffle         = False,
             infinite        = False,
     ):
         for cache in cls.cache_generator(
                 glob_path=glob_path,
-                batch_size=batch_size,
                 reads_per_file=reads_per_file,
                 resamples=resamples,
                 shuffle=shuffle,
@@ -104,8 +101,7 @@ class ParquetImageDataGenerator(ImageDataGenerator):
     def cache_generator(
             cls,
             glob_path,
-            batch_size     = 128,
-            reads_per_file = 2,
+            reads_per_file = 3,
             resamples      = 1,
             shuffle        = False,
             infinite       = False,
@@ -117,11 +113,15 @@ class ParquetImageDataGenerator(ImageDataGenerator):
         while True:
             for filename in filenames:
                 num_rows    = ParquetFile(filename).metadata.num_rows
-                cache_size  = math.ceil( num_rows / batch_size / reads_per_file ) * batch_size
-                batch_count = math.ceil( cache_size / batch_size )
+                cache_size  = math.ceil( num_rows / reads_per_file )
                 for n_read in range(reads_per_file):
                     gc.collect();  # sleep(1)   # sleep(1) is required to allow measurement of the garbage collector
-                    cache = pd.read_parquet(filename).iloc[ cache_size * n_read : cache_size * (n_read+1) ].copy()
+                    cache = (
+                        pd.read_parquet(filename)
+                            # .set_index('image_id', drop=True)  # WARN: Don't do this, it breaks other things
+                            .iloc[ cache_size * n_read : cache_size * (n_read+1) ]
+                            .copy()
+                    )
                     for resample in range(resamples):
                         if shuffle:
                             cache = cache.sample(frac=1)

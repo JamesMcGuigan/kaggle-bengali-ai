@@ -8,7 +8,7 @@ import pandas as pd
 from frozendict import frozendict
 from sklearn.model_selection import train_test_split
 
-from src.dataset.transforms import Transforms
+from src.dataset.Transforms import Transforms
 from src.settings import settings
 
 

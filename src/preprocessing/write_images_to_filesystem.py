@@ -9,7 +9,7 @@ import matplotlib.image
 import pandas as pd
 from pyarrow.parquet import ParquetFile
 
-from src.dataset.transforms import Transforms
+from src.dataset.Transforms import Transforms
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
 
