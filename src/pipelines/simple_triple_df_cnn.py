@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # This is a first pass, simplest thing that could possibly work attempt
 # We train three separate MINST style CNNs for each label, then combine the results
 import os

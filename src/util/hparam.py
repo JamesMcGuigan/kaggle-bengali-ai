@@ -140,6 +140,36 @@ def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, v
     return callbacks
 
 
+def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
+    if 'val_loss' in history.history:
+        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
+        model_stats['time']   = timer_seconds
+        model_stats['epochs'] = len(history.history['loss'])
+    else:
+        model_stats = None
+    return model_stats
+
+
+def model_compile(
+        hparams:      Dict,
+        model:        tf.keras.models.Model,
+        output_shape: Union[None, int, Dict] = None,
+    ):
+    hparams   = { **settings['hparam_defaults'], **hparams }
+    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
+    loss      = losses(output_shape)
+    weights   = loss_weights(output_shape)
+
+    model.compile(
+        loss=loss,
+        loss_weights=weights,
+        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
+        metrics=['accuracy']
+    )
+    return model
+
+
 def model_compile_fit(
         hparams:      Dict,
         model:        tf.keras.models.Model,
@@ -151,20 +181,13 @@ def model_compile_fit(
         best_only   = True,
         verbose     = settings['verbose']['fit'],
 ):
-    hparams   = { **settings['hparam_defaults'], **hparams }
-    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
-    callback  = callbacks(hparams, dataset, model_file, log_dir, best_only, verbose)
-    loss      = losses(output_shape)
-    weights   = loss_weights(output_shape)
-
     timer_start = time.time()
-    model.compile(
-        loss=loss,
-        loss_weights=weights,
-        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
-        metrics=['accuracy']
-    )
-    history = model.fit(
+
+    hparams = { **settings['hparam_defaults'], **hparams }
+    model   = model_compile( hparams, model, output_shape )
+
+    callback = callbacks(hparams, dataset, model_file, log_dir, best_only, verbose)
+    history  = model.fit(
         dataset.X["train"], dataset.Y["train"],
         batch_size=hparams.get("batch_size", 128),
         epochs=epochs,
@@ -174,11 +197,5 @@ def model_compile_fit(
     )
     timer_seconds = int(time.time() - timer_start)
 
-    if 'val_loss' in history.history:
-        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
-        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
-        model_stats['time']   = timer_seconds
-        model_stats['epochs'] = len(history.history['loss'])
-    else:
-        model_stats = None
+    model_stats = model_stats_from_history(history, timer_seconds, best_only)
     return model_stats

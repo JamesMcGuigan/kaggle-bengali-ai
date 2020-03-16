@@ -5,7 +5,6 @@ from typing import AnyStr, Dict, Union
 import glob2
 import numpy as np
 import pandas as pd
-from memory_profiler import profile
 from sklearn.model_selection import train_test_split
 
 from src.dataset.transforms import Transforms
@@ -20,10 +19,11 @@ class DatasetDF():
     def __init__(self,
                  test_train   = 'train',
                  data_id: Union[str,int] = '0',
-                 fraction     = 1,
+                 size         = -1,
+                 fraction     =  1,
+                 split: float = 0.1,
                  Y_field      = None,
                  shuffle      = True,
-                 split: float = 0.1,
         ):
         gc.collect()
 
@@ -33,6 +33,7 @@ class DatasetDF():
         self.split      = split    if self.test_train is 'train' else 0
         self.shuffle    = shuffle  if self.test_train is 'train' else False
         self.fraction   = fraction if self.test_train is 'train' else 1
+        self.size       = size
 
         self.parquet_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
 
@@ -44,11 +45,17 @@ class DatasetDF():
                 'train': pd.read_parquet(parquet_filename),
                 'valid': None
             }
-            if self.fraction < 1:
-                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
-                del discard
-            if self.split != 0:
-                raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
+            # Use size=1 to create a reference dataframe with valid .input_size() + .output_size()
+            if self.size > 0:
+                raw['valid'] = raw['train'][size+1:size*2]
+                raw['train'] = raw['train'][:size]
+            else:
+                if self.fraction < 1:
+                    raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
+                    del discard
+                if self.split != 0:
+                    raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
+
             if raw['valid'] is None:
                 raw['valid'] = pd.DataFrame(columns=raw['train'].columns)
 
