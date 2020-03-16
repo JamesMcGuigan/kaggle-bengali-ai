@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
 ##### 
-##### 2020-03-16 02:52:48+00:00
+##### 2020-03-16 02:55:38+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 7173aa5 [ahead 2] DatasetDF | refactor and optimize transforms into separate class
+##### * master dd50187 [ahead 4] write_images_to_filesystem | fix verbose
 ##### 
-##### 7173aa515204bcfc9c65d4c16fd192ae8cba6b1c
+##### dd501876d997cd481c49712229e7b1589f6b28e1
 ##### 
 
 #####
@@ -381,7 +381,7 @@ def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, ver
             if existing_images == expected_images: continue
 
         for parquet_filename in parquet_filenames:
-            if verbose >= 2:
+            if verbose:
                 print(f'write_images_to_filesystem({only or ""}) - reading:  ', parquet_filename)
 
             dataframe  = pd.read_parquet(parquet_filename)
@@ -396,10 +396,10 @@ def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, ver
 
                 matplotlib.image.imsave(image_filename, image_data[index].squeeze(), cmap='gray')
                 image_count += 1
-                if verbose:
+                if verbose == 1:
                     print(f'write_images_to_filesystem({only or ""}) - wrote:    ', image_filename)
 
-    if verbose >= 1:
+    if verbose:
         print( f'write_images_to_filesystem({only or ""}) - wrote: {image_count} files in: {round(time.time() - time_start,2)}s')
 
 
@@ -423,7 +423,8 @@ if __name__ == '__main__':
     argparse_from_dicts([args, transform_args], inplace=True)
 
     test_args = copy.deepcopy(args)
-    test_args['force'] = True
+    test_args['force']   = True
+    test_args['verbose'] = True
 
     write_images_to_filesystem(only='test',  transform_args=transform_args, **test_args )
     write_images_to_filesystem(only='train', transform_args=transform_args, **args )
@@ -436,12 +437,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
 ##### 
-##### 2020-03-16 02:52:48+00:00
+##### 2020-03-16 02:55:38+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 7173aa5 [ahead 2] DatasetDF | refactor and optimize transforms into separate class
+##### * master dd50187 [ahead 4] write_images_to_filesystem | fix verbose
 ##### 
-##### 7173aa515204bcfc9c65d4c16fd192ae8cba6b1c
+##### dd501876d997cd481c49712229e7b1589f6b28e1
 ##### 
