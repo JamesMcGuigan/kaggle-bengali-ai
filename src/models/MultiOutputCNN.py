@@ -11,14 +11,14 @@ from tensorflow.keras.layers import (
     Flatten,
     GlobalMaxPooling2D,
     MaxPooling2D,
-    )
-
+)
 
 
 # noinspection DuplicatedCode
 def MultiOutputCNN(
         input_shape,
         output_shape: Union[List, Dict],
+        cnn_units=32,
         cnns_per_maxpool=1,
         maxpool_layers=1,
         dense_layers=1,
@@ -37,7 +37,7 @@ def MultiOutputCNN(
 
     for cnn1 in range(1,maxpool_layers+1):
         for cnn2 in range(1, cnns_per_maxpool+1):
-            x = Conv2D( 32 * cnn1, kernel_size=(3, 3), padding='same', activation='relu')(x)
+            x = Conv2D( cnn_units * cnn1, kernel_size=(3, 3), padding='same', activation='relu')(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
         x = BatchNormalization()(x)
         x = Dropout(dropout)(x)
