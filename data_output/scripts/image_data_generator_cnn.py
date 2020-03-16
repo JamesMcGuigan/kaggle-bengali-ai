@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 11:42:52+00:00
+##### 2020-03-16 11:47:36+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 42d3c6b [ahead 2] image_data_generator_cnn | refactor submission_df() to use generator
+##### * master 2ffbdc0 [ahead 1] image_data_generator_cnn | remove frozendict() not in Kaggle pip repo
 ##### 
-##### 42d3c6bcce1ea3263131cb26a32d98c2bf1ba3b2
+##### 2ffbdc0cbb33cf9fe88b449290ee6633922cb1fb
 ##### 
 
 #####
@@ -88,6 +88,9 @@ for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 ##### START src/dataset/Transforms.py
 #####
 
+import gc
+import math
+from time import sleep
 from typing import AnyStr, Dict, Union, List
 
 import numpy as np
@@ -301,6 +304,8 @@ class Transforms():
 ##### START src/callbacks/KaggleTimeoutCallback.py
 #####
 
+import math
+import re
 import time
 from typing import Union
 
@@ -380,9 +385,13 @@ class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
 ##### START src/dataset/DatasetDF.py
 #####
 
+import gc
 import os
-from typing import Union
+from typing import AnyStr, Dict, Union
 
+import glob2
+import numpy as np
+import pandas as pd
 from sklearn.model_selection import train_test_split
 
 # from src.dataset.Transforms import Transforms
@@ -554,7 +563,7 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
 
 from tensorflow.keras.callbacks import *
 import tensorflow.keras.backend as K
-
+import numpy as np
 
 class CyclicLR(Callback):
     """This callback implements a cyclical learning rate policy (CLR).
@@ -697,9 +706,14 @@ class CyclicLR(Callback):
 
 # Notebook: https://www.kaggle.com/jamesmcguigan/reading-parquet-files-ram-cpu-optimization/
 # Notebook: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
+import gc
+import math
 from collections import Callable
 
+import glob2
+import pandas as pd
 from keras_preprocessing.image import ImageDataGenerator
+from pyarrow.parquet import ParquetFile
 
 
 class ParquetImageDataGenerator(ImageDataGenerator):
@@ -952,6 +966,7 @@ def argparse_from_dict(config: Dict, inplace=False):
 #####
 
 import gc
+import os
 from time import sleep
 
 import numpy as np
@@ -1019,7 +1034,9 @@ def df_to_submission_csv(df: DataFrame, filename: str):
 #####
 
 import math
+import os
 import re
+import time
 from typing import Dict, AnyStr, Union
 
 import tensorflow as tf
@@ -1410,12 +1427,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 11:42:52+00:00
+##### 2020-03-16 11:47:36+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 42d3c6b [ahead 2] image_data_generator_cnn | refactor submission_df() to use generator
+##### * master 2ffbdc0 [ahead 1] image_data_generator_cnn | remove frozendict() not in Kaggle pip repo
 ##### 
-##### 42d3c6bcce1ea3263131cb26a32d98c2bf1ba3b2
+##### 2ffbdc0cbb33cf9fe88b449290ee6633922cb1fb
 ##### 
