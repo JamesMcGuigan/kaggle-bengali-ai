@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
+##### ./kaggle_compile.py ./src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 21:01:41+00:00
+##### 2020-03-16 23:16:52+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master da14cb1 [ahead 7] image_data_generator_cnn | set batch_size: 32
+##### * master 1621356 [ahead 12] MultiOutputCNN.py | vastly increase size of CNN
 ##### 
-##### da14cb155b8d334ed0d2be6c2f66e3024cdd2015
+##### 162135660400afb645a6983f4e3430d4b8c5acef
 ##### 
 
 #####
@@ -861,14 +861,14 @@ from tensorflow.keras.layers import (
     Flatten,
     GlobalMaxPooling2D,
     MaxPooling2D,
-    )
-
+)
 
 
 # noinspection DuplicatedCode
 def MultiOutputCNN(
         input_shape,
         output_shape: Union[List, Dict],
+        cnn_units=32,
         cnns_per_maxpool=1,
         maxpool_layers=1,
         dense_layers=1,
@@ -887,7 +887,7 @@ def MultiOutputCNN(
 
     for cnn1 in range(1,maxpool_layers+1):
         for cnn2 in range(1, cnns_per_maxpool+1):
-            x = Conv2D( 32 * cnn1, kernel_size=(3, 3), padding='same', activation='relu')(x)
+            x = Conv2D( cnn_units * cnn1, kernel_size=(3, 3), padding='same', activation='relu')(x)
         x = MaxPooling2D(pool_size=(2, 2))(x)
         x = BatchNormalization()(x)
         x = Dropout(dropout)(x)
@@ -984,13 +984,13 @@ from pandas import DataFrame
 
 
 ### BUGFIX: Repeatedly calling model.predict(...) results in memory leak - https://github.com/keras-team/keras/issues/13118
-def submission_df(model, output_shape):
+def submission_df(model, output_shape, transform_X_args = { "normalize": True }):
     gc.collect()
 
     submission = pd.DataFrame(columns=output_shape.keys())
     # large datasets on submit, so loop
     for data_id in range(0,4):
-        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args=transform_X_args  )
         test_dataset_rows = test_dataset.X['train'].shape[0]
         batch_size        = 32
         for index in range(0, test_dataset_rows, 32):
@@ -1259,7 +1259,7 @@ def model_compile_fit(
 #####
 
 #####
-##### START src/pipelines/image_data_generator_cnn.py
+##### START ./src/pipelines/image_data_generator_cnn.py
 #####
 
 #!/usr/bin/env python
@@ -1284,7 +1284,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Log
 
 
 
-def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
+def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transform_X_args={}):
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
@@ -1345,11 +1345,12 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         # "featurewise_std_normalization": True,  # No visible effect in plt.imgshow() | requires .fit()
         # "samplewise_std_normalization": True,   # No visible effect in plt.imgshow() | requires .fit()
         # "zca_whitening": True,                   # Kaggle, insufficent memory
+        "dtype": 'float16'
     }
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": { "normalize": False },
+        "transform_X_args": { "normalize": False, **transform_X_args },
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   3,
@@ -1374,7 +1375,10 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         "valid": ParquetImageDataGenerator(**datagen_args),
         "test":  ParquetImageDataGenerator(rescale=1./255),
     }
-    # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
+    for key, args in flow_args.items():
+        if args.get('featurewise_center') or args.get('featurewise_std_normalization') or args.get('zca_whitening'):
+            datagens[key].fit(dataset.X['train'])
+
     fileglobs = {
         "train": f"{settings['dir']['data']}/train_image_data_[123].parquet",
         "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
@@ -1422,12 +1426,13 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
 
 if __name__ == '__main__':
     model_hparams = {
-        "cnns_per_maxpool":   3,
-        "maxpool_layers":     4,
-        "dense_layers":       2,
-        "dense_units":      256,
-        "regularization": False,
-        "global_maxpool": False,
+        "cnn_units":         64,
+        "cnns_per_maxpool":   4,
+        "maxpool_layers":     6,
+        "dense_layers":       4,
+        "dense_units":     1024,
+        "regularization":  True,
+        "global_maxpool":  True,
     }
     train_hparams = {
         "optimizer":     "RMSprop",
@@ -1436,6 +1441,10 @@ if __name__ == '__main__':
         "best_only":     True,
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
+    }
+    transform_X_args = {
+        "normalize": True,
+        "resize":    1
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1451,7 +1460,12 @@ if __name__ == '__main__':
     logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
     csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
 
-    model, model_stats, output_shape = image_data_generator_cnn(train_hparams, model_hparams, pipeline_name)
+    model, model_stats, output_shape = image_data_generator_cnn(
+        train_hparams    = train_hparams,
+        model_hparams    = model_hparams,
+        pipeline_name    = pipeline_name,
+        transform_X_args = transform_X_args
+    )
 
     log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
 
@@ -1460,18 +1474,18 @@ if __name__ == '__main__':
 
 
 #####
-##### END   src/pipelines/image_data_generator_cnn.py
+##### END   ./src/pipelines/image_data_generator_cnn.py
 #####
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
+##### ./kaggle_compile.py ./src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 21:01:41+00:00
+##### 2020-03-16 23:16:52+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master da14cb1 [ahead 7] image_data_generator_cnn | set batch_size: 32
+##### * master 1621356 [ahead 12] MultiOutputCNN.py | vastly increase size of CNN
 ##### 
-##### da14cb155b8d334ed0d2be6c2f66e3024cdd2015
+##### 162135660400afb645a6983f4e3430d4b8c5acef
 ##### 
