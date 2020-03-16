@@ -116,7 +116,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
-        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ]),
+        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ])
 
     callback = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
