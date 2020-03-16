@@ -14,7 +14,6 @@ chardet==3.0.4            # via requests
 cycler==0.10.0            # via matplotlib
 cytoolz==0.10.1           # via -r requirements.in
 decorator==4.4.2          # via ipython, networkx, traitlets
-frozendict==1.2           # via -r requirements.in
 gast==0.2.2               # via tensorflow, tensorflow-gpu
 glob2==0.7                # via -r requirements.in
 google-auth-oauthlib==0.4.1  # via tensorboard

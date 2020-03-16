@@ -6,7 +6,6 @@ from collections import Callable
 
 import glob2
 import pandas as pd
-from frozendict import frozendict
 from keras_preprocessing.image import ImageDataGenerator
 from pyarrow.parquet import ParquetFile
 
@@ -22,8 +21,8 @@ class ParquetImageDataGenerator(ImageDataGenerator):
             glob_path:       str,
             transform_X:     Callable,
             transform_Y:     Callable,
-            transform_X_args = frozendict(),
-            transform_Y_args = frozendict(),
+            transform_X_args = {},
+            transform_Y_args = {},
             batch_size       = 32,
             reads_per_file   = 2,
             resamples        = 1,

@@ -5,7 +5,6 @@ from typing import AnyStr, Dict, Union
 import glob2
 import numpy as np
 import pandas as pd
-from frozendict import frozendict
 from sklearn.model_selection import train_test_split
 
 from src.dataset.Transforms import Transforms
@@ -25,8 +24,8 @@ class DatasetDF():
                  split: float = 0.1,
                  Y_field      = None,
                  shuffle      = True,
-                 transform_X_args = frozendict(),
-                 transform_Y_args = frozendict(),
+                 transform_X_args = {},
+                 transform_Y_args = {},
         ):
         gc.collect()
 

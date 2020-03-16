@@ -88,9 +88,6 @@ for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 ##### START src/dataset/Transforms.py
 #####
 
-import gc
-import math
-from time import sleep
 from typing import AnyStr, Dict, Union, List
 
 import numpy as np
@@ -304,8 +301,6 @@ class Transforms():
 ##### START src/callbacks/KaggleTimeoutCallback.py
 #####
 
-import math
-import re
 import time
 from typing import Union
 
@@ -385,14 +380,9 @@ class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
 ##### START src/dataset/DatasetDF.py
 #####
 
-import gc
 import os
-from typing import AnyStr, Dict, Union
+from typing import Union
 
-import glob2
-import numpy as np
-import pandas as pd
-from frozendict import frozendict
 from sklearn.model_selection import train_test_split
 
 # from src.dataset.Transforms import Transforms
@@ -412,8 +402,8 @@ class DatasetDF():
                  split: float = 0.1,
                  Y_field      = None,
                  shuffle      = True,
-                 transform_X_args = frozendict(),
-                 transform_Y_args = frozendict(),
+                 transform_X_args = {},
+                 transform_Y_args = {},
         ):
         gc.collect()
 
@@ -564,7 +554,7 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
 
 from tensorflow.keras.callbacks import *
 import tensorflow.keras.backend as K
-import numpy as np
+
 
 class CyclicLR(Callback):
     """This callback implements a cyclical learning rate policy (CLR).
@@ -707,15 +697,9 @@ class CyclicLR(Callback):
 
 # Notebook: https://www.kaggle.com/jamesmcguigan/reading-parquet-files-ram-cpu-optimization/
 # Notebook: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
-import gc
-import math
 from collections import Callable
 
-import glob2
-import pandas as pd
-from frozendict import frozendict
 from keras_preprocessing.image import ImageDataGenerator
-from pyarrow.parquet import ParquetFile
 
 
 class ParquetImageDataGenerator(ImageDataGenerator):
@@ -729,8 +713,8 @@ class ParquetImageDataGenerator(ImageDataGenerator):
             glob_path:       str,
             transform_X:     Callable,
             transform_Y:     Callable,
-            transform_X_args = frozendict(),
-            transform_Y_args = frozendict(),
+            transform_X_args = {},
+            transform_Y_args = {},
             batch_size       = 32,
             reads_per_file   = 2,
             resamples        = 1,
@@ -968,7 +952,6 @@ def argparse_from_dict(config: Dict, inplace=False):
 #####
 
 import gc
-import os
 from time import sleep
 
 import numpy as np
@@ -1036,9 +1019,7 @@ def df_to_submission_csv(df: DataFrame, filename: str):
 #####
 
 import math
-import os
 import re
-import time
 from typing import Dict, AnyStr, Union
 
 import tensorflow as tf
