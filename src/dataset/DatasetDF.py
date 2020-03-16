@@ -5,6 +5,7 @@ from typing import AnyStr, Dict, Union
 import glob2
 import numpy as np
 import pandas as pd
+from frozendict import frozendict
 from sklearn.model_selection import train_test_split
 
 from src.dataset.transforms import Transforms
@@ -24,6 +25,8 @@ class DatasetDF():
                  split: float = 0.1,
                  Y_field      = None,
                  shuffle      = True,
+                 transform_X_args = frozendict(),
+                 transform_Y_args = frozendict(),
         ):
         gc.collect()
 
@@ -62,14 +65,17 @@ class DatasetDF():
             # Attempt to save memory by doing transform_X() within the loop
             # X can be transformed before np.concatenate, but multi-output Y must be done after pd.concat()
             for key, value in raw.items():
-                X = Transforms.transform_X(value)
+                X = Transforms.transform_X(value, **transform_X_args)
                 if len(self.X[key]) == 0: self.X[key] = X
                 else:                     self.X[key] = np.concatenate([ self.X[key], X ])
                 self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]       ])
                 self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values  ])
             del raw; gc.collect()
 
-        self.Y = { key: Transforms.transform_Y(value) for key,value in self.Y.items() }
+        self.Y = {
+            key: Transforms.transform_Y(value, **transform_Y_args)
+            for key,value in self.Y.items()
+        }
         pass
 
 

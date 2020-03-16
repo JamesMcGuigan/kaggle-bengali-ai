@@ -13,6 +13,7 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler,
 from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
 from src.settings import settings
+from src.util.logs import model_stats_from_history
 from src.vendor.CLR.clr_callback import CyclicLR
 
 
@@ -139,16 +140,6 @@ def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, v
         ]
     return callbacks
 
-
-def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
-    if 'val_loss' in history.history:
-        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
-        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
-        model_stats['time']   = timer_seconds
-        model_stats['epochs'] = len(history.history['loss'])
-    else:
-        model_stats = None
-    return model_stats
 
 
 def model_compile(

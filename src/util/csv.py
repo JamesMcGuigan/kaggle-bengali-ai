@@ -1,4 +1,6 @@
+import gc
 import os
+from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -9,9 +11,15 @@ from src.dataset.DatasetDF import DatasetDF
 
 ### Predict Output Submssion
 def submission_df(model, output_shape):
+    gc.collect(); sleep(5)
+
     submission = pd.DataFrame(columns=output_shape.keys())
-    for data_id in range(0,4):
-        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # large datasets on submit, so loop
+    for data_id in range(0,4):  # large datasets on submit, so loop
+        test_dataset = DatasetDF(
+            test_train='test',
+            data_id=data_id,
+            transform_X_args={ "normalize": True }
+        )
         predictions  = model.predict(test_dataset.X['train'])
         # noinspection PyTypeChecker
         submission = submission.append(

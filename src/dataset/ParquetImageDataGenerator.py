@@ -1,10 +1,12 @@
-# Source: https://www.kaggle.com/jamesmcguigan/reading-parquet-files-ram-cpu-optimization/
+# Notebook: https://www.kaggle.com/jamesmcguigan/reading-parquet-files-ram-cpu-optimization/
+# Notebook: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
 import gc
 import math
 from collections import Callable
 
 import glob2
 import pandas as pd
+from frozendict import frozendict
 from keras_preprocessing.image import ImageDataGenerator
 from pyarrow.parquet import ParquetFile
 
@@ -15,17 +17,19 @@ class ParquetImageDataGenerator(ImageDataGenerator):
         super().__init__(**kwargs)
 
 
-    def flow_from_parquet(self,
-                          glob_path: str,
-                          transform_X: Callable,
-                          transform_Y: Callable,
-                          batch_size     = 32,
-                          reads_per_file = 2,
-                          resamples      = 1,
-                          shuffle        = False,
-                          seed           = 0,
-                          infinite       = True,
-                          test           = False,
+    def flow_from_parquet(
+            self,
+            glob_path:       str,
+            transform_X:     Callable,
+            transform_Y:     Callable,
+            transform_X_args = frozendict(),
+            transform_Y_args = frozendict(),
+            batch_size       = 32,
+            reads_per_file   = 2,
+            resamples        = 1,
+            shuffle          = False,
+            infinite         = True,
+            test             = False,
     ):
         """
             Source: ./venv/lib/python3.6/site-packages/keras_preprocessing/image/image_data_generator.py
@@ -43,30 +47,68 @@ class ParquetImageDataGenerator(ImageDataGenerator):
             shuffle  = False
             infinite = False
 
-        for batch in self.batch_generator(glob_path,
-                                          batch_size=batch_size,
-                                          reads_per_file=reads_per_file,
-                                          resamples=resamples,
-                                          shuffle=shuffle,
-                                          seed=seed,
-                                          infinite=infinite,
+        for (X,Y) in self.cache_XY_generator(
+                glob_path=glob_path,
+                transform_X=transform_X,
+                transform_X_args=transform_X_args,
+                transform_Y=transform_Y,
+                transform_Y_args=transform_Y_args,
+                batch_size=batch_size,
+                reads_per_file=reads_per_file,
+                resamples=resamples,
+                shuffle=shuffle,
+                infinite=infinite,
         ):
-            X = transform_X(batch)
-            Y = transform_Y(batch)
-            if test: yield X
-            else:    yield (X,Y)
+            cache_size  = X.shape[0]
+            batch_count = math.ceil( cache_size / batch_size )
+            for n_batch in range(batch_count):
+                X_batch = X[ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
+                if isinstance(Y, dict):
+                    Y_batch = {
+                        key: Y[key][ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
+                        for key in Y.keys()
+                    }
+                else:
+                    Y_batch = Y[ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
+                yield ( X_batch, Y_batch )
 
 
-    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     @classmethod
-    def batch_generator(cls,
-                        glob_path,
-                        batch_size=128,
-                        reads_per_file=2,
-                        resamples=1,
-                        shuffle=False,
-                        seed=0,
-                        infinite=False,
+    def cache_XY_generator(
+            cls,
+            glob_path:        str,
+            transform_X:      Callable,
+            transform_X_args: {},
+            transform_Y:      Callable,
+            transform_Y_args: {},
+            batch_size      = 128,
+            reads_per_file  = 2,
+            resamples       = 1,
+            shuffle         = False,
+            infinite        = False,
+    ):
+        for cache in cls.cache_generator(
+                glob_path=glob_path,
+                batch_size=batch_size,
+                reads_per_file=reads_per_file,
+                resamples=resamples,
+                shuffle=shuffle,
+                infinite=infinite,
+        ):
+            X = transform_X(cache, **transform_X_args)
+            Y = transform_Y(cache, **transform_Y_args)
+            yield (X, Y)
+
+
+    @classmethod
+    def cache_generator(
+            cls,
+            glob_path,
+            batch_size     = 128,
+            reads_per_file = 2,
+            resamples      = 1,
+            shuffle        = False,
+            infinite       = False,
     ):
         filenames = sorted(glob2.glob(glob_path))
         if len(filenames) == 0: raise Exception(f"{cls.__name__}.batch_generator() - invalid glob_path: {glob_path}")
@@ -78,13 +120,10 @@ class ParquetImageDataGenerator(ImageDataGenerator):
                 cache_size  = math.ceil( num_rows / batch_size / reads_per_file ) * batch_size
                 batch_count = math.ceil( cache_size / batch_size )
                 for n_read in range(reads_per_file):
-                    cache = pd.read_parquet(filename).iloc[ cache_size * n_read : cache_size * (n_read+1) ].copy()
                     gc.collect();  # sleep(1)   # sleep(1) is required to allow measurement of the garbage collector
-
+                    cache = pd.read_parquet(filename).iloc[ cache_size * n_read : cache_size * (n_read+1) ].copy()
                     for resample in range(resamples):
                         if shuffle:
-                            cache = cache.sample(frac=1, random_state=seed)
-                        for n_batch in range(batch_count):
-                            yield cache[ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
-
+                            cache = cache.sample(frac=1)
+                        yield cache
             if not infinite: break

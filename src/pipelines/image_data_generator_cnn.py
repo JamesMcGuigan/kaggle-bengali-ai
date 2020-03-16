@@ -3,8 +3,6 @@ import os
 import time
 
 import glob2
-import numpy as np
-import pandas as pd
 from pyarrow.parquet import ParquetFile
 
 from src.dataset.DatasetDF import DatasetDF
@@ -13,8 +11,9 @@ from src.dataset.transforms import Transforms
 from src.models.MultiOutputCNN import MultiOutputCNN
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
-from src.util.csv import df_to_submission_csv
+from src.util.csv import df_to_submission_csv, submission_df
 from src.util.hparam import hparam_key, model_compile, model_stats_from_history, callbacks
+from src.util.logs import log_model_stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
@@ -81,25 +80,27 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         # "samplewise_std_normalization": True,   # No visible effect in plt.imgshow() | requires .fit()
         # "zca_whitening": True,                   # Kaggle, insufficent memory
     }
-    flow_args = {
-        "transform_X":     Transforms.transform_X,
-        "transform_Y":     Transforms.transform_Y,
-        "batch_size":      train_hparams['batch_size'],
-        "reads_per_file":  5,
-        "resamples":       2,
-        "shuffle":         True,
-        "infinite":        True,
-
+    flow_args = {}
+    flow_args['train'] = {
+        "transform_X":      Transforms.transform_X,
+        "transform_X_args": { "normalize": False },
+        "transform_Y":      Transforms.transform_Y,
+        "batch_size":       train_hparams['batch_size'],
+        "reads_per_file":   3,
+        "resamples":        1,
+        "shuffle":          True,
+        "infinite":         True,
     }
-    flow_test_args = {
-        **flow_args,
-        "resamples":       2,
-        "reads_per_file":  2,
-        "shuffle":         False,
-        "infinite":        False,
-        "test":            True,
-        # "use_multiprocessing": True,
-        # "workers":         10
+    flow_args['valid'] = {
+        **flow_args['train'],
+        "resamples":  1,
+    }
+    flow_args['test'] = {
+        **flow_args['train'],
+        "resamples":  1,
+        "shuffle":    False,
+        "infinite":   False,
+        "test":       True,
     }
 
     datagens = {
@@ -109,39 +110,32 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     }
     # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
     generators = {
-        "train": datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_[123].parquet", **flow_args),
-        "valid": datagens['valid'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_0.parquet",     **flow_args),
-        "test":  datagens['test' ].flow_from_parquet(f"{settings['dir']['data']}/test_image_data_*.parquet",      **flow_test_args),
+        "train": datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_[123].parquet", **flow_args['train' ]),
+        "valid": datagens['valid'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_0.parquet",     **flow_args['valid']),
+        "test":  datagens['test' ].flow_from_parquet(f"{settings['dir']['data']}/test_image_data_*.parquet",      **flow_args['test']),
     }
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
+        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ]),
+
     callback = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
 
     timer_start = time.time()
-    # steps_per_epoch == 1 parquet file (hopefully)
-    steps_per_epoch = int(dataset_rows / flow_args['batch_size'] * flow_args['resamples'])
-    steps_per_epoch = 2
-    # history = model.fit_generator(
+    # train == 1 parquet file | valid = 1 file read
+    steps_per_epoch  = int(dataset_rows / flow_args['train']['batch_size'] * flow_args['train']['resamples'])
+    validation_steps = int(dataset_rows / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'])
     history = model.fit(
         generators['train'],
         validation_data = generators['valid'],
-        epochs           = 2,
+        epochs           = 999,
         steps_per_epoch  = steps_per_epoch,
-        validation_steps = 2,  # 50,
-        verbose          = 1,
+        validation_steps = validation_steps,
+        verbose          = 2,
         callbacks        = callback
     )
     timer_seconds = int(time.time() - timer_start)
     model_stats   = model_stats_from_history(history, timer_seconds, best_only=True)
-    # return model, model_stats, output_shape
-
-    # def submission_df(model, output_shape):
-    # BUG: ValueError: `generator` yielded an element of shape (0, 1) where an element of shape (None, None, None, None) was expected.
-    predictions = model.predict(generators['test'])
-    submission = pd.DataFrame({
-        key: np.argmax( predictions[index], axis=-1 )
-        for index, key in enumerate(output_shape.keys())
-    })
-    df_to_submission_csv( submission, csv_filename )
 
     return model, model_stats, output_shape
 
@@ -163,7 +157,7 @@ if __name__ == '__main__':
         "learning_rate": 0.001,
         "best_only":     True,
         "split":         0.2,
-        "batch_size":    512,   # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM
+        "batch_size":    128,   # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM
         "fraction":      1,     # Reduce memory overhead, but do 4 loops
         "patience":      10,
         "loops":         3,
@@ -184,3 +178,7 @@ if __name__ == '__main__':
 
     model, model_stats, output_shape = image_data_generator_cnn(train_hparams, model_hparams, pipeline_name)
 
+    log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
+
+    submission = submission_df(model, output_shape)
+    df_to_submission_csv( submission, csv_filename )

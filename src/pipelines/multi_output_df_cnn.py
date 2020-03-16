@@ -10,6 +10,7 @@ from src.settings import settings
 from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv, submission_df
 from src.util.hparam import model_compile_fit, hparam_key
+from src.util.logs import log_model_stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
@@ -90,29 +91,8 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
             model_stats.append(stats)
         else: continue
         break                        # KaggleTimeoutCallback() triggered on_train_begin()
+
     return model, model_stats, output_shape
-
-
-
-### Log Stats Results
-def log_stats_results(model_stats, logfilename):
-    with open(logfilename, 'w') as file:
-        output = [
-            "------------------------------",
-            f"Completed",
-            f"model_hparams: {model_hparams}",
-            f"train_hparams: {train_hparams}"
-        ]
-        output += list(map(str, model_stats))
-        output += [
-            "------------------------------"
-        ]
-        output = "\n".join(output)
-        print(      output )
-        file.write( output )
-        print("wrote:", logfilename)
-
-
 
 
 
@@ -163,6 +143,8 @@ if __name__ == '__main__':
     csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
 
     model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
+
+    log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
 
     submission = submission_df(model, output_shape)
     df_to_submission_csv( submission, csv_filename )
