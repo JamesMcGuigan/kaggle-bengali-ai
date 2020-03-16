@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 11:47:36+00:00
+##### 2020-03-16 12:15:49+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 2ffbdc0 [ahead 1] image_data_generator_cnn | remove frozendict() not in Kaggle pip repo
+##### * master 2e18189 [ahead 3] image_data_generator_cnn | typo: accidential comma tuple
 ##### 
-##### 2ffbdc0cbb33cf9fe88b449290ee6633922cb1fb
+##### 2e181895a10bc9fc6c517b957dc7c89f00544b34
 ##### 
 
 #####
@@ -1352,7 +1352,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
-        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ]),
+        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ])
 
     callback = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
@@ -1427,12 +1427,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 11:47:36+00:00
+##### 2020-03-16 12:15:49+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 2ffbdc0 [ahead 1] image_data_generator_cnn | remove frozendict() not in Kaggle pip repo
+##### * master 2e18189 [ahead 3] image_data_generator_cnn | typo: accidential comma tuple
 ##### 
-##### 2ffbdc0cbb33cf9fe88b449290ee6633922cb1fb
+##### 2e181895a10bc9fc6c517b957dc7c89f00544b34
 ##### 
