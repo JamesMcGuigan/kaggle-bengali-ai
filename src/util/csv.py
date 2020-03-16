@@ -1,6 +1,26 @@
 import os
 
+import numpy as np
+import pandas as pd
 from pandas import DataFrame
+
+from src.dataset.DatasetDF import DatasetDF
+
+
+### Predict Output Submssion
+def submission_df(model, output_shape):
+    submission = pd.DataFrame(columns=output_shape.keys())
+    for data_id in range(0,4):
+        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # large datasets on submit, so loop
+        predictions  = model.predict(test_dataset.X['train'])
+        # noinspection PyTypeChecker
+        submission = submission.append(
+            pd.DataFrame({
+                key: np.argmax( predictions[index], axis=-1 )
+                for index, key in enumerate(output_shape.keys())
+            }, index=test_dataset.ID['train'])
+        )
+    return submission
 
 
 def df_to_submission(df: DataFrame) -> DataFrame:

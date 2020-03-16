@@ -1,14 +1,12 @@
 import os
 
 import glob2
-import numpy as np
-import pandas as pd
 
 from src.dataset.DatasetDF import DatasetDF
 from src.models.MultiOutputCNN import MultiOutputCNN
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
-from src.util.csv import df_to_submission_csv
+from src.util.csv import df_to_submission_csv, submission_df
 from src.util.hparam import model_compile_fit, hparam_key
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
@@ -113,20 +111,6 @@ def log_stats_results(model_stats, logfilename):
         print("wrote:", logfilename)
 
 
-### Predict Output Submssion
-def submission_df(model, output_shape):
-    submission = pd.DataFrame(columns=output_shape.keys())
-    for data_id in range(0,4):
-        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # large datasets on submit, so loop
-        predictions  = model.predict(test_dataset.X['train'])
-        # noinspection PyTypeChecker
-        submission = submission.append(
-            pd.DataFrame({
-                key: np.argmax( predictions[index], axis=-1 )
-                for index, key in enumerate(output_shape.keys())
-            }, index=test_dataset.ID['train'])
-        )
-    return submission
 
 
 
