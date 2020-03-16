@@ -21,10 +21,18 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
             f"Completed",
             f"model_hparams: {model_hparams}",
             f"train_hparams: {train_hparams}",
+        ]
+        if isinstance(model_stats, dict):
             simplejson.dumps(
                 { key: str(value) for key, value in model_stats.items() },
                 sort_keys=False, indent=4*' '
-            ),
+            )
+        elif isinstance(model_stats, list):
+            output += [ "\n".join([ str(line) for line in model_stats ]) ]
+        else:
+            output += [ str(model_stats) ]
+
+        output += [
             "------------------------------",
         ]
         output = "\n".join(output)
