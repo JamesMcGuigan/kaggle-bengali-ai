@@ -3,6 +3,7 @@ import os
 import time
 
 import glob2
+import numpy as np
 from pyarrow.parquet import ParquetFile
 
 from src.dataset.DatasetDF import DatasetDF
@@ -16,6 +17,7 @@ from src.util.hparam import hparam_key, model_compile, model_stats_from_history,
 from src.util.logs import log_model_stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+
 
 
 def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
@@ -109,26 +111,38 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         "test":  ParquetImageDataGenerator(rescale=1./255),
     }
     # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
-    generators = {
-        "train": datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_[123].parquet", **flow_args['train' ]),
-        "valid": datagens['valid'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_0.parquet",     **flow_args['valid']),
-        "test":  datagens['test' ].flow_from_parquet(f"{settings['dir']['data']}/test_image_data_*.parquet",      **flow_args['test']),
+    fileglobs = {
+        "train": f"{settings['dir']['data']}/train_image_data_[123].parquet",
+        "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
+        "test":  f"{settings['dir']['data']}/test_image_data_*.parquet",
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
-        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ])
+        fileglobs["train"] = f"{settings['dir']['data']}/train_image_data_*.parquet"
 
-    callback = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
+    generators = {
+        key: datagens[key].flow_from_parquet(value, **flow_args[key])
+        for key,value in fileglobs.items()
+    }
+    dataset_rows_per_file = {
+        key: np.mean([ ParquetFile(filename).metadata.num_rows for filename in glob2.glob(fileglobs[key]) ])
+        for key in fileglobs.keys()
+    }
+    dataset_rows_total = {
+        key: sum([ ParquetFile(filename).metadata.num_rows for filename in glob2.glob(fileglobs[key]) ])
+        for key in fileglobs.keys()
+    }
 
+    ### Epoch: train == one whole parquet files | valid = 1 filesystem read
+    steps_per_epoch  = int(dataset_rows_per_file['train'] / flow_args['train']['batch_size'] * flow_args['train']['resamples'] )
+    validation_steps = int(dataset_rows_per_file['valid'] / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'] )
+    callback         = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
     timer_start = time.time()
-    # train == 1 parquet file | valid = 1 file read
-    steps_per_epoch  = int(dataset_rows / flow_args['train']['batch_size'] * flow_args['train']['resamples'])
-    validation_steps = int(dataset_rows / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'])
     history = model.fit(
         generators['train'],
         validation_data = generators['valid'],
-        epochs           = 999,
+        epochs           = 99,
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
         verbose          = 2,
@@ -156,11 +170,8 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "split":         0.2,
-        "batch_size":    128,   # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM
-        "fraction":      1,     # Reduce memory overhead, but do 4 loops
+        "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
-        "loops":         3,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
