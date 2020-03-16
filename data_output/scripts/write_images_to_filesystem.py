@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
 ##### 
-##### 2020-03-15 19:14:05+00:00
+##### 2020-03-16 02:52:48+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master b72fc1c [ahead 1] preprocessing | write_images_to_filesystem | fix verbose
+##### * master 7173aa5 [ahead 2] DatasetDF | refactor and optimize transforms into separate class
 ##### 
-##### b72fc1cb7d89fda2329d7f13e8271e71b8ada636
+##### 7173aa515204bcfc9c65d4c16fd192ae8cba6b1c
 ##### 
 
 #####
@@ -85,84 +85,35 @@ for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 #####
 
 #####
-##### START src/dataset/DatasetDF.py
+##### START src/dataset/transforms.py
 #####
 
-import math
-import os
-from time import sleep
-from typing import AnyStr, Dict, Union
-
 import gc
-import glob2
+import math
+from time import sleep
+from typing import AnyStr, Dict, Union, List
+
 import numpy as np
 import pandas as pd
 import skimage.measure
 from pandas import DataFrame, Series
-from sklearn.model_selection import train_test_split
 
 # from src.settings import settings
 
 
-
-class DatasetDF():
+class Transforms():
     csv_filename         = f"{settings['dir']['data']}/train.csv"
     csv_data             = pd.read_csv(csv_filename).set_index('image_id', drop=True).astype('category')
     csv_data['grapheme'] = csv_data['grapheme'].cat.codes.astype('category')
 
-    def __init__(self,
-                 test_train   = 'train',
-                 data_id: Union[str,int] = '0',
-                 fraction     = 1,
-                 Y_field      = None,
-                 shuffle      = True,
-                 split: float = 0.1,
-        ):
-        self.test_train = test_train
-        self.data_id    = data_id
-        self.Y_field    = Y_field
-        self.split      = split    if self.test_train is 'train' else 0
-        self.shuffle    = shuffle  if self.test_train is 'train' else False
-        self.fraction   = fraction if self.test_train is 'train' else 1
 
-        self.image_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
-
-        self.X:  Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
-        self.Y:  Dict[AnyStr, Union[pd.DataFrame,Dict]] = { "train": pd.DataFrame(),   "valid": pd.DataFrame()   }
-        self.ID: Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
-        for filename in self.image_filenames:
-            raw = {
-                'train': pd.read_parquet(filename),
-                'valid': None
-            }
-            if self.fraction < 1:
-                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
-                del discard
-            if self.split != 0:
-                raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
-            if raw['valid'] is None:
-                raw['valid'] = pd.DataFrame(columns=raw['train'].columns)
-
-            # Attempt to save memory by doing transform_X() within the loop
-            # X can be transformed before np.concatenate, but multi-output Y must be done after pd.concat()
-            for key, value in raw.items():
-                X = self.transform_X(value)
-                if len(self.X[key]) == 0: self.X[key] = X
-                else:                     self.X[key] = np.concatenate([ self.X[key],  self.transform_X(value)  ])
-                self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]      ])
-                self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values ])
-            del raw; gc.collect()
-
-        self.Y = { key: self.transform_Y(value) for key,value in self.Y.items() }
-        pass
-
-
-    def transform_Y(self, df: DataFrame) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
-        if self.test_train == 'test': return pd.DataFrame()
-
+    @classmethod
+    def transform_Y(cls, df: DataFrame, Y_field: Union[List[str],str] = None) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
+        ### Profiler: 0.2% of DatasetDF() runtime
         labels = df['image_id'].values
-        output_df = self.csv_data.drop(columns='image_id', errors='ignore').loc[labels]
-        output_df = output_df[self.Y_field] if self.Y_field else output_df
+        try:             output_df = cls.csv_data.loc[labels]
+        except KeyError: output_df = cls.csv_data.loc[[]]         # test dataset
+        output_df = output_df[Y_field] if Y_field else output_df
 
         if isinstance(output_df, Series) or len(output_df.columns) == 1:
             # single model output
@@ -179,55 +130,46 @@ class DatasetDF():
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
     # noinspection PyArgumentList
     @classmethod
-    def transform_X(cls, train: DataFrame, resize=2, denoise=True, normalize=True, center=True, invert=True) -> np.ndarray:
+    def transform_X(cls,
+                    train: DataFrame,
+                    resize=2,
+                    invert=True,
+                    rescale=True,
+                    denoise=True,
+                    center=True,
+                    normalize=True,
+    ) -> np.ndarray:
+        ### Profiler: 78.7% of DatasetDF() runtime
         train = (train.drop(columns='image_id', errors='ignore')
                  .values.astype('uint8')                   # unit8 for initial data processing
                  .reshape(-1, 137, 236)                    # 2D arrays for inline image processing
-        )
+                )
         gc.collect(); sleep(1)
 
-
-        # Invert for processing
         # Colors   |   0 = black      | 255 = white
         # invert   |   0 = background | 255 = line
         # original | 255 = background |   0 = line
-        train = (255-train)
+
+        # Invert for processing
+        train = cls.invert(train)
+
+        if resize:
+            train = cls.resize(train, resize)
+
+        if rescale:
+            train = cls.rescale(train)
 
         if denoise:
-            # Rescale lines to maximum brightness, and set background values (less than 2x mean()) to 0
-            train = np.array([ train[i] + (255-train[i].max())              for i in range(train.shape[0]) ])
-            train = np.array([ train[i] * (train[i] >= np.mean(train[i])*2) for i in range(train.shape[0]) ])
-
-        if isinstance(resize, bool) and resize == True:
-            resize = 2
-        if resize and resize != 1:                  # Reduce image size by 2x
-            # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
-            # Out of the different resize functions:
-            # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
-            # - np.median() produces the most accurate downsampling
-            # - np.max() produces an image with thicker lines - occasionally produces bounding boxes
-            # - np.min() produces a  image with thiner  lines (harder to read)
-            resize_fn = np.median  # np.max if invert else np.min
-
-            # BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
-            train = np.array([
-                skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=0, func=resize_fn)
-                for i in range(train.shape[0])
-            ])
+            train = cls.denoise(train)
 
         if center:
-            # NOTE: cls.crop_center_image assumes inverted
-            train = np.array([
-                cls.crop_center_image(train[i,:,:], cval=0)
-                for i in range(train.shape[0])
-            ])
+            train = cls.center(train)
 
-        # Un-invert if invert==False
-        if not invert: train = (255-train)
+        if not invert:
+            train = cls.invert(train)  # un-invert
 
         if normalize:
-            train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
-
+            train = cls.normalize(train)
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
@@ -235,14 +177,92 @@ class DatasetDF():
         return train
 
 
+    @classmethod
+    def invert(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 0.5% of DatasetDF() runtime
+        return (255-train)
+
+
+    @classmethod
+    def normalize(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 15.4% of DatasetDF() runtime
+        train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
+        return train
+
+
+    @classmethod
+    def denoise(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 0.3% of DatasetDF() runtime
+        train = train * (train >= 42)  # 42 is the maximum mean
+        return train
+
+
+    @classmethod
+    def rescale(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 3.4% of DatasetDF() runtime
+        ### Rescale lines to maximum brightness, and set background values (less than 2x mean()) to 0
+        ### max(mean()) =  14, 38,  33,  25, 36, 42,  20, 37,  38,  26, 36, 35
+        ### min(max())  = 242, 94, 105, 224, 87, 99, 247, 85, 106, 252, 85, 97
+        ### max(min())  =  0,   5,   3,   0,  6,  3,   0,  5,   3,   0,  6,  4
+        # try:
+        #     print('max mean()',  max([ np.mean(train[i]) for i in range(train.shape[0]) ]))
+        #     print('min  max()',  min([ np.max(train[i]) for i in range(train.shape[0]) ]))
+        #     print('max  min()',  max([ np.min(train[i]) for i in range(train.shape[0]) ]))
+        # except: pass
+        train = np.array([
+            (train[i].astype('float64') * 255./train[i].max()).astype('uint8')
+            for i in range(train.shape[0])
+        ])
+        return train
+
+
+    @classmethod
+    def resize(cls, train: np.ndarray, resize: int) -> np.ndarray:
+        ### Profiler: 29% of DatasetDF() runtime  (37% with [for in] loop)
+        # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
+        # Out of the different resize functions:
+        # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
+        # - np.median() produces the most accurate downsampling - but returns float64
+        # - np.max() produces an image with thicker lines       - occasionally produces bounding boxes
+        # - np.min() produces a  image with thiner  lines       - harder to read
+        if isinstance(resize, bool) and resize == True:
+            resize = 2
+        if resize and resize != 1:
+            resize_fn = np.max
+            if   len(train.shape) == 2: resize_shape =    (resize, resize)
+            elif len(train.shape) == 3: resize_shape = (1, resize, resize)
+            elif len(train.shape) == 4: resize_shape = (1, resize, resize, 1)
+            else:                       resize_shape = (1, resize, resize, 1)
+
+            train = skimage.measure.block_reduce(train, resize_shape, cval=0, func=resize_fn)
+            # train = np.array([
+            #     skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=0, func=resize_fn)
+            #     for i in range(train.shape[0])
+            # ])
+        return train
+
+
+    @classmethod
+    def center(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 12.3% of DatasetDF() runtime
+        ### NOTE: cls.crop_center_image assumes inverted
+        train = np.array([
+            cls.crop_center_image(train[i,:,:], cval=0, tol=42)
+            for i in range(train.shape[0])
+        ])
+        return train
+
+
     # DOCS: https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
     # NOTE: assumes inverted
     @classmethod
     def crop_center_image(cls, img, cval=0, tol=0):
+        ### Profiler: 11% of DatasetDF() runtime
         org_shape   = img.shape
-        img_cropped = cls.crop_image(img)
-        pad_x       = (org_shape[0] - img_cropped.shape[0])/2
-        pad_y       = (org_shape[1] - img_cropped.shape[1])/2
+        img_cropped = cls.crop_image_border_px(img, px=1)
+        img_cropped = cls.crop_image_background(img_cropped, tol=tol)
+        pad_x       = (org_shape[0] - img_cropped.shape[0]) / 2.0
+        pad_y       = (org_shape[1] - img_cropped.shape[1]) / 2.0
         padding     = (
             (math.floor(pad_x), math.ceil(pad_x)),
             (math.floor(pad_y), math.ceil(pad_y))
@@ -251,52 +271,27 @@ class DatasetDF():
         return img_center
 
 
+    @classmethod
+    def crop_image_border_px(cls, img, px=1):
+        ### Profiler: 0.1% of DatasetDF() runtime
+        ### crop one pixel border from the image to remove any bounding box effects
+        img  = img[px:img.shape[0]-px, px:img.shape[1]-px]
+        return img
+
+
     # Source: https://codereview.stackexchange.com/questions/132914/crop-black-border-of-image-using-numpy
     # This is the fast method that simply remove all empty rows/columns
     # NOTE: assumes inverted
     @classmethod
-    def crop_image(cls, img, tol=0):
+    def crop_image_background(cls, img, tol=0):
+        ### Profiler: 4.7% of DatasetDF() runtime
+        img  = img[1:img.shape[0]-1, 1:img.shape[1]-1]  # crop one pixel border from image to remove any bounding box
         mask = img > tol
         return img[np.ix_(mask.any(1),mask.any(0))]
 
 
-    def epoch_size(self):
-        return self.X['train'].shape[0]
-
-
-    def input_shape(self):
-        return self.X['train'].shape[1:]  # == (137, 236, 1) / 2
-
-
-    @classmethod
-    def output_shape(cls, Y_field=None):
-        if isinstance(Y_field, str):
-            return cls.csv_data[Y_field].nunique()
-
-        csv_data     = cls.csv_data[Y_field] if Y_field else cls.csv_data
-        output_shape = (csv_data.drop(columns='image_id', errors='ignore')
-                                .nunique()
-                                .to_dict())
-        return output_shape
-
-
-
-
-if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-    # NOTE: loading all datasets exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
-    for data_id in range(0,4):
-        for test_train in ['test', 'train']:
-            dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
-            print(f"{test_train}:{data_id} dataset.image_filenames", dataset.image_filenames)
-            print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
-            print(f"{test_train}:{data_id} dataset.Y",               { key: df.shape for key, df in dataset.Y.items() })
-            print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
-            print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
-            print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
-
-
 #####
-##### END   src/dataset/DatasetDF.py
+##### END   src/dataset/transforms.py
 #####
 
 #####
@@ -352,14 +347,14 @@ import matplotlib.image
 import pandas as pd
 from pyarrow.parquet import ParquetFile
 
-# from src.dataset.DatasetDF import DatasetDF
+# from src.dataset.transforms import Transforms
 # from src.settings import settings
 # from src.util.argparse import argparse_from_dicts
 
 
-
 # Entries into the Bengali AI Competition often suffer from out of memory errors when reading from a dataframe
 # Quick and dirty solution is to write data as images to a directory and use ImageDataGenerator.flow_from_directory()
+# noinspection PyDefaultArgument
 def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, verbose=False, force=False, transform_args={} ):
     transform_defaults = { 'resize': 2, 'denoise': True, 'center': True, 'invert': True, 'normalize': False }
     transform_args     = { **transform_defaults, **transform_args }
@@ -391,7 +386,7 @@ def write_images_to_filesystem( data_dir, feature_dir, ext='png', only=None, ver
 
             dataframe  = pd.read_parquet(parquet_filename)
             image_ids  = dataframe['image_id'].tolist()
-            image_data = DatasetDF.transform_X(dataframe, **transform_args )
+            image_data = Transforms.transform_X(dataframe, **transform_args )
 
             for index, image_id in enumerate(image_ids):
                 image_filename = f'{image_dir}/{image_id}.{ext}'
@@ -419,6 +414,7 @@ if __name__ == '__main__':
     }
     transform_args = {
         'resize':    2,
+        'rescale':   1,
         'denoise':   1,
         'center':    1,
         'invert':    1,
@@ -440,12 +436,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/preprocessing/write_images_to_filesystem.py --commit
 ##### 
-##### 2020-03-15 19:14:05+00:00
+##### 2020-03-16 02:52:48+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master b72fc1c [ahead 1] preprocessing | write_images_to_filesystem | fix verbose
+##### * master 7173aa5 [ahead 2] DatasetDF | refactor and optimize transforms into separate class
 ##### 
-##### b72fc1cb7d89fda2329d7f13e8271e71b8ada636
+##### 7173aa515204bcfc9c65d4c16fd192ae8cba6b1c
 ##### 
