@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 12:15:49+00:00
+##### 2020-03-16 21:01:41+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 2e18189 [ahead 3] image_data_generator_cnn | typo: accidential comma tuple
+##### * master da14cb1 [ahead 7] image_data_generator_cnn | set batch_size: 32
 ##### 
-##### 2e181895a10bc9fc6c517b957dc7c89f00544b34
+##### da14cb155b8d334ed0d2be6c2f66e3024cdd2015
 ##### 
 
 #####
@@ -90,7 +90,6 @@ for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
 import gc
 import math
-from time import sleep
 from typing import AnyStr, Dict, Union, List
 
 import numpy as np
@@ -173,7 +172,7 @@ class Transforms():
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
-        gc.collect(); sleep(1)
+        gc.collect(); # sleep(1)
         return train
 
 
@@ -541,10 +540,18 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
             f"Completed",
             f"model_hparams: {model_hparams}",
             f"train_hparams: {train_hparams}",
+        ]
+        if isinstance(model_stats, dict):
             simplejson.dumps(
                 { key: str(value) for key, value in model_stats.items() },
                 sort_keys=False, indent=4*' '
-            ),
+            )
+        elif isinstance(model_stats, list):
+            output += [ "\n".join([ str(line) for line in model_stats ]) ]
+        else:
+            output += [ str(model_stats) ]
+
+        output += [
             "------------------------------",
         ]
         output = "\n".join(output)
@@ -967,40 +974,61 @@ def argparse_from_dict(config: Dict, inplace=False):
 
 import gc
 import os
-from time import sleep
 
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
 ### Predict Output Submssion
-# from src.dataset.ParquetImageDataGenerator import ParquetImageDataGenerator
-# from src.dataset.Transforms import Transforms
-# from src.settings import settings
+# from src.dataset.DatasetDF import DatasetDF
 
 
+### BUGFIX: Repeatedly calling model.predict(...) results in memory leak - https://github.com/keras-team/keras/issues/13118
 def submission_df(model, output_shape):
-    gc.collect(); sleep(5)
+    gc.collect()
 
-    # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
     submission = pd.DataFrame(columns=output_shape.keys())
-    for cache in ParquetImageDataGenerator.cache_generator(
-        f"{settings['dir']['data']}/test_image_data_*.parquet",
-        reads_per_file = 3,
-        resamples      = 1,
-        shuffle        = False,
-        infinite       = False,
-    ):
-        X = Transforms.transform_X(cache, normalize=True)
-        predictions = model.predict(X)
-        # noinspection PyTypeChecker
-        submission = submission.append(
-            pd.DataFrame({
-                key: np.argmax( predictions[index], axis=-1 )
-                for index, key in enumerate(output_shape.keys())
-            }, index=cache['image_id'])
-        )
+    # large datasets on submit, so loop
+    for data_id in range(0,4):
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
+        test_dataset_rows = test_dataset.X['train'].shape[0]
+        batch_size        = 32
+        for index in range(0, test_dataset_rows, 32):
+            X_batch     = test_dataset.X['train'][index : index+batch_size]
+            predictions = model.predict_on_batch(X_batch)
+            # noinspection PyTypeChecker
+            submission = submission.append(
+                pd.DataFrame({
+                    key: np.argmax( predictions[index], axis=-1 )
+                    for index, key in enumerate(output_shape.keys())
+                }, index=test_dataset.ID['train'])
+            )
     return submission
+
+###
+### Use submission_df() it seems to have more success on Kaggle
+###
+# def submission_df_generator(model, output_shape):
+#     gc.collect(); sleep(5)
+#
+#     # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
+#     submission = pd.DataFrame(columns=output_shape.keys())
+#     for batch in ParquetImageDataGenerator.batch_generator(
+#         f"{settings['dir']['data']}/test_image_data_*.parquet",
+#         reads_per_file = 3,
+#         resamples      = 1,
+#         shuffle        = False,
+#         infinite       = False,
+#     ):
+#         X = Transforms.transform_X(batch, normalize=True)
+#         predictions = model.predict_on_batch(X)
+#         submission = submission.append(
+#             pd.DataFrame({
+#                 key: np.argmax( predictions[index], axis=-1 )
+#                 for index, key in enumerate(output_shape.keys())
+#             }, index=batch['image_id'])
+#         )
+#     return submission
 
 
 def df_to_submission(df: DataFrame) -> DataFrame:
@@ -1239,6 +1267,7 @@ import os
 import time
 
 import glob2
+import numpy as np
 from pyarrow.parquet import ParquetFile
 
 # from src.dataset.DatasetDF import DatasetDF
@@ -1252,6 +1281,7 @@ from pyarrow.parquet import ParquetFile
 # from src.util.logs import log_model_stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+
 
 
 def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
@@ -1345,26 +1375,38 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         "test":  ParquetImageDataGenerator(rescale=1./255),
     }
     # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
-    generators = {
-        "train": datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_[123].parquet", **flow_args['train' ]),
-        "valid": datagens['valid'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_0.parquet",     **flow_args['valid']),
-        "test":  datagens['test' ].flow_from_parquet(f"{settings['dir']['data']}/test_image_data_*.parquet",      **flow_args['test']),
+    fileglobs = {
+        "train": f"{settings['dir']['data']}/train_image_data_[123].parquet",
+        "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
+        "test":  f"{settings['dir']['data']}/test_image_data_*.parquet",
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
-        generators["train"] = datagens['train'].flow_from_parquet(f"{settings['dir']['data']}/train_image_data_*.parquet", **flow_args['train' ])
+        fileglobs["train"] = f"{settings['dir']['data']}/train_image_data_*.parquet"
 
-    callback = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
+    generators = {
+        key: datagens[key].flow_from_parquet(value, **flow_args[key])
+        for key,value in fileglobs.items()
+    }
+    dataset_rows_per_file = {
+        key: np.mean([ ParquetFile(filename).metadata.num_rows for filename in glob2.glob(fileglobs[key]) ])
+        for key in fileglobs.keys()
+    }
+    dataset_rows_total = {
+        key: sum([ ParquetFile(filename).metadata.num_rows for filename in glob2.glob(fileglobs[key]) ])
+        for key in fileglobs.keys()
+    }
 
+    ### Epoch: train == one whole parquet files | valid = 1 filesystem read
+    steps_per_epoch  = int(dataset_rows_per_file['train'] / flow_args['train']['batch_size'] * flow_args['train']['resamples'] )
+    validation_steps = int(dataset_rows_per_file['valid'] / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'] )
+    callback         = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
     timer_start = time.time()
-    # train == 1 parquet file | valid = 1 file read
-    steps_per_epoch  = int(dataset_rows / flow_args['train']['batch_size'] * flow_args['train']['resamples'])
-    validation_steps = int(dataset_rows / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'])
     history = model.fit(
         generators['train'],
         validation_data = generators['valid'],
-        epochs           = 999,
+        epochs           = 99,
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
         verbose          = 2,
@@ -1392,11 +1434,8 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "split":         0.2,
-        "batch_size":    128,   # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM
-        "fraction":      1,     # Reduce memory overhead, but do 4 loops
+        "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
-        "loops":         3,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1427,12 +1466,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-16 12:15:49+00:00
+##### 2020-03-16 21:01:41+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 2e18189 [ahead 3] image_data_generator_cnn | typo: accidential comma tuple
+##### * master da14cb1 [ahead 7] image_data_generator_cnn | set batch_size: 32
 ##### 
-##### 2e181895a10bc9fc6c517b957dc7c89f00544b34
+##### da14cb155b8d334ed0d2be6c2f66e3024cdd2015
 ##### 
