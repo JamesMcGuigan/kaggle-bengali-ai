@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --commit
+##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --save
 ##### 
-##### 2020-03-17 21:00:31+00:00
+##### 2020-03-17 21:03:35+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 9fdaa1a [ahead 10] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
+##### * master dc13e09 [ahead 12] settings | fix verbose['tensorboard']
 ##### 
-##### 9fdaa1a31493459c3596c911e75c24528b13d4eb
+##### dc13e0986a5781c9ecba14e759998473bb56fd33
 ##### 
+##### Wrote: ./data_output/scripts/image_data_generator_NASNetMobile.py
 
 #####
 ##### START src/settings.py
@@ -53,12 +54,11 @@ settings['hparam_defaults'] = {
 
 settings['verbose'] = {
     "tensorboard": {
-        {
             'Localhost':   True,
             'Interactive': False,
             'Batch':       False,
-        }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
-    },
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+
     "fit": {
         'Localhost':   1,
         'Interactive': 2,
@@ -1467,14 +1467,15 @@ if __name__ == '__main__':
 #####
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --commit
+##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --save
 ##### 
-##### 2020-03-17 21:00:31+00:00
+##### 2020-03-17 21:03:35+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 9fdaa1a [ahead 10] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
+##### * master dc13e09 [ahead 12] settings | fix verbose['tensorboard']
 ##### 
-##### 9fdaa1a31493459c3596c911e75c24528b13d4eb
+##### dc13e0986a5781c9ecba14e759998473bb56fd33
 ##### 
+##### Wrote: ./data_output/scripts/image_data_generator_NASNetMobile.py

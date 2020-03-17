@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
+##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-17 21:00:19+00:00
+##### 2020-03-17 21:03:32+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 56e7fa6 [ahead 8] simple_triple_df_cnn | set resize=1
+##### * master dc13e09 [ahead 12] settings | fix verbose['tensorboard']
 ##### 
-##### 56e7fa6609ed69b31eaddd1a39a901fa25067a4c
+##### dc13e0986a5781c9ecba14e759998473bb56fd33
 ##### 
+##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
 #####
 ##### START src/settings.py
@@ -53,12 +54,11 @@ settings['hparam_defaults'] = {
 
 settings['verbose'] = {
     "tensorboard": {
-        {
             'Localhost':   True,
             'Interactive': False,
             'Batch':       False,
-        }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
-    },
+    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+
     "fit": {
         'Localhost':   1,
         'Interactive': 2,
@@ -1301,14 +1301,15 @@ if __name__ == '__main__':
 #####
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
+##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --save
 ##### 
-##### 2020-03-17 21:00:19+00:00
+##### 2020-03-17 21:03:32+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 56e7fa6 [ahead 8] simple_triple_df_cnn | set resize=1
+##### * master dc13e09 [ahead 12] settings | fix verbose['tensorboard']
 ##### 
-##### 56e7fa6609ed69b31eaddd1a39a901fa25067a4c
+##### dc13e0986a5781c9ecba14e759998473bb56fd33
 ##### 
+##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
