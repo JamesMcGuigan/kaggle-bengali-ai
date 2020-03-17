@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --commit
 ##### 
-##### 2020-03-17 21:00:24+00:00
+##### 2020-03-17 21:00:31+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master f8911bd [ahead 9] kaggle_compile.py | ./data_output/scripts/multi_output_df_cnn.py
+##### * master 9fdaa1a [ahead 10] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
 ##### 
-##### f8911bdddefe25979ee9e0b4b5d39905a0ee5495
+##### 9fdaa1a31493459c3596c911e75c24528b13d4eb
 ##### 
 
 #####
@@ -1469,12 +1469,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --commit
 ##### 
-##### 2020-03-17 21:00:24+00:00
+##### 2020-03-17 21:00:31+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master f8911bd [ahead 9] kaggle_compile.py | ./data_output/scripts/multi_output_df_cnn.py
+##### * master 9fdaa1a [ahead 10] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
 ##### 
-##### f8911bdddefe25979ee9e0b4b5d39905a0ee5495
+##### 9fdaa1a31493459c3596c911e75c24528b13d4eb
 ##### 
