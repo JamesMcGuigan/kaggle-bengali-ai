@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
 ##### 
-##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
+##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-15 00:26:35+00:00
+##### 2020-03-17 21:00:19+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 80ad108 [ahead 1] DatasetDF | BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
+##### * master 56e7fa6 [ahead 8] simple_triple_df_cnn | set resize=1
 ##### 
-##### 80ad10895e1771c1cd66de27d7263f2f722c65d1
+##### 56e7fa6609ed69b31eaddd1a39a901fa25067a4c
 ##### 
-##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
 #####
 ##### START src/settings.py
@@ -20,6 +19,8 @@
 
 # DOCS: https://www.kaggle.com/WinningModelDocumentationGuidelines
 import os
+
+import simplejson
 
 settings = {}
 
@@ -43,7 +44,11 @@ settings['hparam_defaults'] = {
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 
     # Timeout = 120 minutes | allow 30 minutes for testing submit | TODO: unsure of KAGGLE_KERNEL_RUN_TYPE on Submit
-    "timeout": "5m" if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == "Interactive" else "90m"
+    "timeout": {
+        'Localhost':   "24h",
+        'Interactive': "5m",
+        'Batch':       "110m",
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), "110m")
 }
 
 settings['verbose'] = {
@@ -64,6 +69,7 @@ settings['verbose'] = {
 if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
     settings['dir'] = {
         "data":        "../input/bengaliai-cv19",
+        "features":    "./input_features/bengaliai-cv19/",
         "models":      "./models",
         "submissions": "./",
         "logs":        "./logs",
@@ -71,16 +77,240 @@ if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 else:
     settings['dir'] = {
         "data":        "./input/bengaliai-cv19",
+        "features":    "./input_features/bengaliai-cv19/",
         "models":      "./data_output/models",
         "submissions": "./data_output/submissions",
         "logs":        "./logs",
     }
 for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
+if __name__ == '__main__':
+    for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
+    for key,value in settings.items():       print(f"settings['{key}']:".ljust(30), str(value))
+
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        with open('settings.json', 'w') as file:
+            print( 'settings', simplejson.dumps(settings, indent=4*' '))
+            simplejson.dump(settings, file, indent=4*' ')
 
 
 #####
 ##### END   src/settings.py
+#####
+
+#####
+##### START src/dataset/Transforms.py
+#####
+
+import gc
+import math
+from typing import AnyStr, Dict, Union, List
+
+import numpy as np
+import pandas as pd
+import skimage.measure
+from pandas import DataFrame, Series
+
+# from src.settings import settings
+
+
+class Transforms():
+    csv_filename         = f"{settings['dir']['data']}/train.csv"
+    csv_data             = pd.read_csv(csv_filename).set_index('image_id', drop=True).astype('category')
+    csv_data['grapheme'] = csv_data['grapheme'].cat.codes.astype('category')
+
+
+    @classmethod
+    #@profile
+    def transform_Y(cls, df: DataFrame, Y_field: Union[List[str],str] = None) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
+        ### Profiler: 0.2% of DatasetDF() runtime
+        labels = df['image_id'].values
+        try:             output_df = cls.csv_data.loc[labels]
+        except KeyError: output_df = cls.csv_data.loc[[]]         # test dataset
+        output_df = output_df[Y_field] if Y_field else output_df
+
+        if isinstance(output_df, Series) or len(output_df.columns) == 1:
+            # single model output
+            output = pd.get_dummies( output_df )
+        else:
+            # multi model output
+            output = {
+                column: pd.get_dummies( output_df[column] )
+                for column in output_df.columns
+            }
+        return output
+
+
+    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
+    # noinspection PyArgumentList
+    @classmethod
+    #@profile
+    def transform_X(cls,
+                    train: DataFrame,
+                    resize=2,
+                    invert=True,
+                    rescale=True,
+                    denoise=True,
+                    center=True,
+                    normalize=True,
+    ) -> np.ndarray:
+        ### Profiler: 78.7% of DatasetDF() runtime
+        train = (train.drop(columns='image_id', errors='ignore')
+                 .values.astype('uint8')                   # unit8 for initial data processing
+                 .reshape(-1, 137, 236)                    # 2D arrays for inline image processing
+                )
+        # Colors   |   0 = black      | 255 = white
+        # invert   |   0 = background | 255 = line
+        # original | 255 = background |   0 = line
+
+        # Invert for processing
+        train = cls.invert(train)
+
+        if resize:
+            train = cls.resize(train, resize)
+
+        if rescale:
+            train = cls.rescale(train)
+
+        if denoise:
+            train = cls.denoise(train)
+
+        if center:
+            train = cls.center(train)
+
+        if not invert:
+            train = cls.invert(train)  # un-invert
+
+        if normalize:
+            train = cls.normalize(train)
+
+        train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
+
+        gc.collect(); # sleep(1)
+        return train
+
+
+    @classmethod
+    #@profile
+    def invert(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 0.5% of DatasetDF() runtime
+        return (255-train)
+
+
+    @classmethod
+    #@profile
+    def normalize(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 15.4% of DatasetDF() runtime
+        train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
+        return train
+
+
+    @classmethod
+    #@profile
+    def denoise(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 0.3% of DatasetDF() runtime
+        train = train * (train >= 42)  # 42 is the maximum mean
+        return train
+
+
+    @classmethod
+    #@profile
+    def rescale(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 3.4% of DatasetDF() runtime
+        ### Rescale lines to maximum brightness, and set background values (less than 2x mean()) to 0
+        ### max(mean()) =  14, 38,  33,  25, 36, 42,  20, 37,  38,  26, 36, 35
+        ### min(max())  = 242, 94, 105, 224, 87, 99, 247, 85, 106, 252, 85, 97
+        ### max(min())  =  0,   5,   3,   0,  6,  3,   0,  5,   3,   0,  6,  4
+        # try:
+        #     print('max mean()',  max([ np.mean(train[i]) for i in range(train.shape[0]) ]))
+        #     print('min  max()',  min([ np.max(train[i]) for i in range(train.shape[0]) ]))
+        #     print('max  min()',  max([ np.min(train[i]) for i in range(train.shape[0]) ]))
+        # except: pass
+        train = np.array([
+            (train[i].astype('float64') * 255./train[i].max()).astype('uint8')
+            for i in range(train.shape[0])
+        ])
+        return train
+
+
+    @classmethod
+    #@profile
+    def resize(cls, train: np.ndarray, resize: int) -> np.ndarray:
+        ### Profiler: 29% of DatasetDF() runtime  (37% with [for in] loop)
+        # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
+        # Out of the different resize functions:
+        # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
+        # - np.median() produces the most accurate downsampling - but returns float64
+        # - np.max() produces an image with thicker lines       - occasionally produces bounding boxes
+        # - np.min() produces a  image with thiner  lines       - harder to read
+        if isinstance(resize, bool) and resize == True:
+            resize = 2
+        if resize and resize != 1:
+            resize_fn = np.max
+            if   len(train.shape) == 2: resize_shape =    (resize, resize)
+            elif len(train.shape) == 3: resize_shape = (1, resize, resize)
+            elif len(train.shape) == 4: resize_shape = (1, resize, resize, 1)
+            else:                       resize_shape = (1, resize, resize, 1)
+
+            train = skimage.measure.block_reduce(train, resize_shape, cval=0, func=resize_fn)
+            # train = np.array([
+            #     skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=0, func=resize_fn)
+            #     for i in range(train.shape[0])
+            # ])
+        return train
+
+
+    @classmethod
+    #@profile
+    def center(cls, train: np.ndarray) -> np.ndarray:
+        ### Profiler: 12.3% of DatasetDF() runtime
+        ### NOTE: cls.crop_center_image assumes inverted
+        train = np.array([
+            cls.crop_center_image(train[i,:,:], cval=0, tol=42)
+            for i in range(train.shape[0])
+        ])
+        return train
+
+
+    # DOCS: https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
+    # NOTE: assumes inverted
+    @classmethod
+    def crop_center_image(cls, img, cval=0, tol=0):
+        ### Profiler: 11% of DatasetDF() runtime
+        org_shape   = img.shape
+        img_cropped = cls.crop_image_border_px(img, px=1)
+        img_cropped = cls.crop_image_background(img_cropped, tol=tol)
+        pad_x       = (org_shape[0] - img_cropped.shape[0]) / 2.0
+        pad_y       = (org_shape[1] - img_cropped.shape[1]) / 2.0
+        padding     = (
+            (math.floor(pad_x), math.ceil(pad_x)),
+            (math.floor(pad_y), math.ceil(pad_y))
+        )
+        img_center = np.pad(img_cropped, padding, 'constant', constant_values=cval)
+        return img_center
+
+
+    @classmethod
+    def crop_image_border_px(cls, img, px=1):
+        ### Profiler: 0.1% of DatasetDF() runtime
+        ### crop one pixel border from the image to remove any bounding box effects
+        img  = img[px:img.shape[0]-px, px:img.shape[1]-px]
+        return img
+
+
+    # Source: https://codereview.stackexchange.com/questions/132914/crop-black-border-of-image-using-numpy
+    # This is the fast method that simply remove all empty rows/columns
+    # NOTE: assumes inverted
+    @classmethod
+    def crop_image_background(cls, img, tol=0):
+        ### Profiler: 4.7% of DatasetDF() runtime
+        img  = img[1:img.shape[0]-1, 1:img.shape[1]-1]  # crop one pixel border from image to remove any bounding box
+        mask = img > tol
+        return img[np.ix_(mask.any(1),mask.any(0))]
+
+
+#####
+##### END   src/dataset/Transforms.py
 #####
 
 #####
@@ -168,170 +398,84 @@ class KaggleTimeoutCallback(tf.keras.callbacks.Callback):
 ##### START src/dataset/DatasetDF.py
 #####
 
-import math
+import gc
 import os
-from time import sleep
 from typing import AnyStr, Dict, Union
 
-import gc
 import glob2
 import numpy as np
 import pandas as pd
-import skimage.measure
-from pandas import DataFrame, Series
 from sklearn.model_selection import train_test_split
 
+# from src.dataset.Transforms import Transforms
 # from src.settings import settings
 
 
-
 class DatasetDF():
-    csv_filename         = f"{settings['dir']['data']}/train.csv"
-    csv_data             = pd.read_csv(csv_filename).set_index('image_id', drop=True).astype('category')
-    csv_data['grapheme'] = csv_data['grapheme'].cat.codes.astype('category')
+    csv_data = Transforms.csv_data
 
+
+    #@profile
     def __init__(self,
                  test_train   = 'train',
                  data_id: Union[str,int] = '0',
-                 fraction     = 1,
+                 size         = -1,
+                 fraction     =  1,
+                 split: float = 0.1,
                  Y_field      = None,
                  shuffle      = True,
-                 split: float = 0.1,
+                 transform_X_args = {},
+                 transform_Y_args = {},
         ):
+        gc.collect()
+
         self.test_train = test_train
         self.data_id    = data_id
         self.Y_field    = Y_field
         self.split      = split    if self.test_train is 'train' else 0
         self.shuffle    = shuffle  if self.test_train is 'train' else False
         self.fraction   = fraction if self.test_train is 'train' else 1
+        self.size       = size
 
-        self.image_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
+        self.parquet_filenames = sorted(glob2.glob(f"{settings['dir']['data']}/{test_train}_image_data_{data_id}.parquet"))
 
         self.X:  Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
         self.Y:  Dict[AnyStr, Union[pd.DataFrame,Dict]] = { "train": pd.DataFrame(),   "valid": pd.DataFrame()   }
         self.ID: Dict[AnyStr, np.ndarray]               = { "train": np.ndarray((0,)), "valid": np.ndarray((0,)) }
-        for filename in self.image_filenames:
+        for parquet_filename in self.parquet_filenames:
             raw = {
-                'train': pd.read_parquet(filename),
+                'train': pd.read_parquet(parquet_filename),
                 'valid': None
             }
-            if self.fraction < 1:
-                raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
-                del discard
-            if self.split != 0:
-                raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
+            # Use size=1 to create a reference dataframe with valid .input_size() + .output_size()
+            if self.size > 0:
+                raw['valid'] = raw['train'][size+1:size*2]
+                raw['train'] = raw['train'][:size]
+            else:
+                if self.fraction < 1:
+                    raw['train'], discard      = train_test_split(raw['train'], train_size=self.fraction, shuffle=self.shuffle)
+                    del discard
+                if self.split != 0:
+                    raw['train'], raw['valid'] = train_test_split(raw['train'], test_size=self.split,     shuffle=self.shuffle, random_state=0)
+
             if raw['valid'] is None:
                 raw['valid'] = pd.DataFrame(columns=raw['train'].columns)
 
             # Attempt to save memory by doing transform_X() within the loop
             # X can be transformed before np.concatenate, but multi-output Y must be done after pd.concat()
             for key, value in raw.items():
-                X = self.transform_X(value)
+                X = Transforms.transform_X(value, **transform_X_args)
                 if len(self.X[key]) == 0: self.X[key] = X
-                else:                     self.X[key] = np.concatenate([ self.X[key],  self.transform_X(value)  ])
-                self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]      ])
-                self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values ])
+                else:                     self.X[key] = np.concatenate([ self.X[key], X ])
+                self.Y[key]  = pd.concat([      self.Y[key],  value[['image_id']]       ])
+                self.ID[key] = np.concatenate([ self.ID[key], value['image_id'].values  ])
             del raw; gc.collect()
 
-        self.Y = { key: self.transform_Y(value) for key,value in self.Y.items() }
+        self.Y = {
+            key: Transforms.transform_Y(value, **transform_Y_args)
+            for key,value in self.Y.items()
+        }
         pass
-
-
-    def transform_Y(self, df: DataFrame) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
-        if self.test_train == 'test': return pd.DataFrame()
-
-        labels = df['image_id'].values
-        output_df = self.csv_data.drop(columns='image_id', errors='ignore').loc[labels]
-        output_df = output_df[self.Y_field] if self.Y_field else output_df
-
-        if isinstance(output_df, Series) or len(output_df.columns) == 1:
-            # single model output
-            output = pd.get_dummies( output_df )
-        else:
-            # multi model output
-            output = {
-                column: pd.get_dummies( output_df[column] )
-                for column in output_df.columns
-            }
-        return output
-
-
-    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/edit/run/29865909
-    # noinspection PyArgumentList
-    @classmethod
-    def transform_X(cls, train: DataFrame, resize=2, denoise=True, normalize=True, center=True, invert=True) -> np.ndarray:
-        train = (train.drop(columns='image_id', errors='ignore')
-                 .values.astype('uint8')                   # unit8 for initial data processing
-                 .reshape(-1, 137, 236)                    # 2D arrays for inline image processing
-        )
-        gc.collect(); sleep(1)
-
-        if invert:                                         # Colors | 0 = black      | 255 = white
-            train = (255-train)                            # invert | 0 = background | 255 = line
-
-        if denoise:                                        # Set small pixel values to background 0
-            if invert: train *= (train >= 25)              #   0 = background | 255 = line  | np.mean() == 12
-            else:      train += (255-train)*(train >= 230) # 255 = background |   0 = line  | np.mean() == 244
-
-        if isinstance(resize, bool) and resize == True:
-            resize = 2
-        if resize and resize != 1:                  # Reduce image size by 2x
-            # NOTEBOOK: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing/
-            # Out of the different resize functions:
-            # - np.mean(dtype=uint8) produces fragmented images (needs float16 to work properly - but RAM intensive)
-            # - np.median() produces the most accurate downsampling
-            # - np.max() produces an enhanced image with thicker lines (maybe slightly easier to read)
-            # - np.min() produces a  dehanced image with thiner lines (harder to read)
-            resize_fn = np.max if invert else np.min
-            cval      = 0      if invert else 255
-
-            # BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
-            train = np.array([
-                skimage.measure.block_reduce(train[i,:,:], (resize,resize), cval=cval, func=resize_fn)
-                for i in range(train.shape[0])
-            ])
-
-        if center:
-            # NOTE: cls.crop_center_image assumes inverted
-            if not invert: train = (255-train)
-            train = np.array([
-                cls.crop_center_image(train[i,:,:])
-                for i in range(train.shape[0])
-            ])
-            if not invert: train = (255-train)
-
-        if normalize:
-            train = train.astype('float16') / 255.0   # prevent division cast: int -> float64
-
-        train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
-
-        gc.collect(); sleep(1)
-        return train
-
-
-    # DOCS: https://docs.scipy.org/doc/numpy/reference/generated/numpy.pad.html
-    # NOTE: assumes inverted
-    @classmethod
-    def crop_center_image(cls, img, tol=0):
-        org_shape   = img.shape
-        img_cropped = cls.crop_image(img)
-        pad_x       = (org_shape[0] - img_cropped.shape[0])/2
-        pad_y       = (org_shape[1] - img_cropped.shape[1])/2
-        padding     = (
-            (math.floor(pad_x), math.ceil(pad_x)),
-            (math.floor(pad_y), math.ceil(pad_y))
-        )
-        img_center = np.pad(img_cropped, padding, 'constant', constant_values=0)
-        return img_center
-
-
-    # Source: https://codereview.stackexchange.com/questions/132914/crop-black-border-of-image-using-numpy
-    # This is the fast method that simply remove all empty rows/columns
-    # NOTE: assumes inverted
-    @classmethod
-    def crop_image(cls, img, tol=0):
-        mask = img > tol
-        return img[np.ix_(mask.any(1),mask.any(0))]
 
 
     def epoch_size(self):
@@ -357,24 +501,88 @@ class DatasetDF():
 
 
 if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-    # NOTE: loading all datasets exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
-    for data_id in range(0,4):
-        for test_train in ['test', 'train']:
-            dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
-            print(f"{test_train}:{data_id} dataset.image_filenames", dataset.image_filenames)
-            print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
-            print(f"{test_train}:{data_id} dataset.Y",               { key: df.shape for key, df in dataset.Y.items() })
-            print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
-            print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
-            print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
+    ### NOTE: loading all datasets at once exceeds 12GB RAM and crashes Python (on 16GB RAM machine)
+    ### Runtime: 3m 12s - for in range(0,4)
+    ### $ find ./src/ -name '*.py' | xargs perl -p -i -e 's/#@profile/@profile/'
+    ### $ time python3 -m memory_profiler src/dataset/DatasetDF.py | less
+    #@profile()
+    def main():
+        for data_id in range(0,4):
+            for test_train in ['test', 'train']:
+                dataset = DatasetDF(test_train=test_train, data_id=data_id, fraction=1)
+                Y_shape = {}
+                for key, Y in dataset.Y.items():
+                    if isinstance(Y, dict): Y_shape[key] = { k:v.shape for k,v in Y.items() }
+                    else:                   Y_shape[key] = Y.shape
 
+                print(f"{test_train}:{data_id} dataset.image_filenames", dataset.parquet_filenames)
+                print(f"{test_train}:{data_id} dataset.X",               { key: df.shape for key, df in dataset.X.items() })
+                print(f"{test_train}:{data_id} dataset.Y", Y_shape)
+                print(f"{test_train}:{data_id} dataset.input_shape()",   dataset.input_shape())
+                print(f"{test_train}:{data_id} dataset.output_shape()",  dataset.output_shape())
+                print(f"{test_train}:{data_id} dataset.epoch_size()",    dataset.epoch_size())
+    main()
 
 #####
 ##### END   src/dataset/DatasetDF.py
 #####
 
 #####
-##### START vendor/CLR/clr_callback.py
+##### START src/util/logs.py
+#####
+
+from typing import Union, Dict
+
+import simplejson
+
+# from src.settings import settings
+
+
+def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
+    if 'val_loss' in history.history:
+        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
+        model_stats['time']   = timer_seconds
+        model_stats['epochs'] = len(history.history['loss'])
+    else:
+        model_stats = None
+    return model_stats
+
+
+def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
+    with open(logfilename, 'w') as file:
+        output = [
+            "------------------------------",
+            f"Completed",
+            f"model_hparams: {model_hparams}",
+            f"train_hparams: {train_hparams}",
+        ]
+        output += [ f"settings[{key}]: {value}" for key, value in settings.items() ]
+        output.append("------------------------------")
+
+        if isinstance(model_stats, dict):
+            output.append(simplejson.dumps(
+                { key: str(value) for key, value in model_stats.items() },
+                sort_keys=False, indent=4*' '
+            ))
+        elif isinstance(model_stats, list):
+            output += [ "\n".join([ str(line) for line in model_stats ]) ]
+        else:
+            output += [ str(model_stats) ]
+
+        output.append("------------------------------")
+        output = "\n".join(output)
+        print(      output )
+        file.write( output )
+        print("wrote:", logfilename)
+
+
+#####
+##### END   src/util/logs.py
+#####
+
+#####
+##### START src/vendor/CLR/clr_callback.py
 #####
 
 from tensorflow.keras.callbacks import *
@@ -513,7 +721,7 @@ class CyclicLR(Callback):
 
 
 #####
-##### END   vendor/CLR/clr_callback.py
+##### END   src/vendor/CLR/clr_callback.py
 #####
 
 #####
@@ -533,8 +741,7 @@ from tensorflow.keras.layers import (
     Flatten,
     GlobalMaxPooling2D,
     MaxPooling2D,
-    )
-
+)
 
 
 # noinspection DuplicatedCode
@@ -607,19 +814,33 @@ def MultiOutputCNN(
 #####
 
 import argparse
-from typing import List, Dict
+import copy
+from typing import Dict, List
 
 
-def argparse_from_dicts(configs: List[Dict]):
+
+def argparse_from_dicts(configs: List[Dict], inplace=False) -> List[Dict]:
     parser = argparse.ArgumentParser()
     for config in list(configs):
         for key, value in config.items():
-            parser.add_argument(f'--{key}', type=type(value), default=value, help=f'{key} (default: %(default)s)')
+            if isinstance(value, bool):
+                parser.add_argument(f'--{key}', action='store_true', default=value, help=f'{key} (default: %(default)s)')
+            else:
+                parser.add_argument(f'--{key}', type=type(value),    default=value, help=f'{key} (default: %(default)s)')
+
 
     args, unknown = parser.parse_known_args()  # Ignore extra CLI args passed in by Kaggle
-    for config in list(configs):
-        for key, value in config.items():
-            config[key] = getattr(args, key)
+
+    outputs = configs if inplace else copy.deepcopy(configs)
+    for index, output in enumerate(outputs):
+        for key, value in outputs[index].items():
+            outputs[index][key] = getattr(args, key)
+
+    return outputs
+
+
+def argparse_from_dict(config: Dict, inplace=False):
+    return argparse_from_dicts([config], inplace)[0]
 
 
 #####
@@ -630,9 +851,63 @@ def argparse_from_dicts(configs: List[Dict]):
 ##### START src/util/csv.py
 #####
 
+import gc
 import os
 
+import numpy as np
+import pandas as pd
 from pandas import DataFrame
+
+### Predict Output Submssion
+# from src.dataset.DatasetDF import DatasetDF
+
+
+### BUGFIX: Repeatedly calling model.predict(...) results in memory leak - https://github.com/keras-team/keras/issues/13118
+def submission_df(model, output_shape):
+    gc.collect()
+
+    submission = pd.DataFrame(columns=output_shape.keys())
+    # large datasets on submit, so loop
+    for data_id in range(0,4):
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
+        test_dataset_rows = test_dataset.X['train'].shape[0]
+        batch_size        = 32
+        for index in range(0, test_dataset_rows, 32):
+            X_batch     = test_dataset.X['train'][index : index+batch_size]
+            predictions = model.predict_on_batch(X_batch)
+            # noinspection PyTypeChecker
+            submission = submission.append(
+                pd.DataFrame({
+                    key: np.argmax( predictions[index], axis=-1 )
+                    for index, key in enumerate(output_shape.keys())
+                }, index=test_dataset.ID['train'])
+            )
+    return submission
+
+###
+### Use submission_df() it seems to have more success on Kaggle
+###
+# def submission_df_generator(model, output_shape):
+#     gc.collect(); sleep(5)
+#
+#     # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
+#     submission = pd.DataFrame(columns=output_shape.keys())
+#     for batch in ParquetImageDataGenerator.batch_generator(
+#         f"{settings['dir']['data']}/test_image_data_*.parquet",
+#         reads_per_file = 3,
+#         resamples      = 1,
+#         shuffle        = False,
+#         infinite       = False,
+#     ):
+#         X = Transforms.transform_X(batch, normalize=True)
+#         predictions = model.predict_on_batch(X)
+#         submission = submission.append(
+#             pd.DataFrame({
+#                 key: np.argmax( predictions[index], axis=-1 )
+#                 for index, key in enumerate(output_shape.keys())
+#             }, index=batch['image_id'])
+#         )
+#     return submission
 
 
 def df_to_submission(df: DataFrame) -> DataFrame:
@@ -650,12 +925,14 @@ def df_to_submission(df: DataFrame) -> DataFrame:
 
 def df_to_submission_csv(df: DataFrame, filename: str):
     submission = df_to_submission(df)
-    submission.to_csv(filename, index=False)
-    print("wrote:", filename, submission.shape)
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
+    else:
+        submission.to_csv(filename, index=False)
+        print("wrote:", filename, submission.shape)
+
 
 #####
 ##### END   src/util/csv.py
@@ -680,7 +957,12 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler,
 # from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
 # from src.settings import settings
-# from vendor.CLR.clr_callback import CyclicLR
+# from src.util.logs import model_stats_from_history
+# from src.vendor.CLR.clr_callback import CyclicLR
+
+
+def hparam_key(hparams):
+    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
 
 
 def min_lr(hparams):
@@ -803,6 +1085,26 @@ def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, v
     return callbacks
 
 
+
+def model_compile(
+        hparams:      Dict,
+        model:        tf.keras.models.Model,
+        output_shape: Union[None, int, Dict] = None,
+    ):
+    hparams   = { **settings['hparam_defaults'], **hparams }
+    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
+    loss      = losses(output_shape)
+    weights   = loss_weights(output_shape)
+
+    model.compile(
+        loss=loss,
+        loss_weights=weights,
+        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
+        metrics=['accuracy']
+    )
+    return model
+
+
 def model_compile_fit(
         hparams:      Dict,
         model:        tf.keras.models.Model,
@@ -814,20 +1116,13 @@ def model_compile_fit(
         best_only   = True,
         verbose     = settings['verbose']['fit'],
 ):
-    hparams   = { **settings['hparam_defaults'], **hparams }
-    optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
-    callback  = callbacks(hparams, dataset, model_file, log_dir, best_only, verbose)
-    loss      = losses(output_shape)
-    weights   = loss_weights(output_shape)
-
     timer_start = time.time()
-    model.compile(
-        loss=loss,
-        loss_weights=weights,
-        optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
-        metrics=['accuracy']
-    )
-    history = model.fit(
+
+    hparams = { **settings['hparam_defaults'], **hparams }
+    model   = model_compile( hparams, model, output_shape )
+
+    callback = callbacks(hparams, dataset, model_file, log_dir, best_only, verbose)
+    history  = model.fit(
         dataset.X["train"], dataset.Y["train"],
         batch_size=hparams.get("batch_size", 128),
         epochs=epochs,
@@ -837,48 +1132,36 @@ def model_compile_fit(
     )
     timer_seconds = int(time.time() - timer_start)
 
-    if 'val_loss' in history.history:
-        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
-        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
-        model_stats['time']   = timer_seconds
-        model_stats['epochs'] = len(history.history['loss'])
-    else:
-        model_stats = None
+    model_stats = model_stats_from_history(history, timer_seconds, best_only)
     return model_stats
-
 
 #####
 ##### END   src/util/hparam.py
 #####
 
 #####
-##### START src/experiments/multi_output_df_cnn.py
+##### START src/pipelines/multi_output_df_cnn.py
 #####
+
+#!/usr/bin/env python
 
 import os
 
 import glob2
-import numpy as np
-import pandas as pd
 
 # from src.dataset.DatasetDF import DatasetDF
 # from src.models.MultiOutputCNN import MultiOutputCNN
 # from src.settings import settings
 # from src.util.argparse import argparse_from_dicts
-# from src.util.csv import df_to_submission_csv
-# from src.util.hparam import model_compile_fit
-
-
+# from src.util.csv import df_to_submission_csv, submission_df
+# from src.util.hparam import model_compile_fit, hparam_key
+# from src.util.logs import log_model_stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
 # https://stackoverflow.com/questions/34199233/how-to-prevent-tensorflow-from-allocating-the-totality-of-a-gpu-memory
 # [ tf.config.experimental.set_memory_growth(gpu, True) for gpu in tf.config.experimental.list_physical_devices('GPU') ]
-
-
-def hparam_key(hparams):
-    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
 
 
 def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
@@ -953,43 +1236,8 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
             model_stats.append(stats)
         else: continue
         break                        # KaggleTimeoutCallback() triggered on_train_begin()
+
     return model, model_stats, output_shape
-
-
-
-### Log Stats Results
-def log_stats_results(model_stats, logfilename):
-    with open(logfilename, 'w') as file:
-        output = [
-            "------------------------------",
-            f"Completed",
-            f"model_hparams: {model_hparams}",
-            f"train_hparams: {train_hparams}"
-        ]
-        output += list(map(str, model_stats))
-        output += [
-            "------------------------------"
-        ]
-        output = "\n".join(output)
-        print(      output )
-        file.write( output )
-        print("wrote:", logfilename)
-
-
-### Predict Output Submssion
-def submission_df(model, output_shape):
-    submission = pd.DataFrame(columns=output_shape.keys())
-    for data_id in range(0,4):
-        test_dataset = DatasetDF(test_train='test', data_id=data_id)  # large datasets on submit, so loop
-        predictions  = model.predict(test_dataset.X['train'])
-        # noinspection PyTypeChecker
-        submission = submission.append(
-            pd.DataFrame({
-                key: np.argmax( predictions[index], axis=-1 )
-                for index, key in enumerate(output_shape.keys())
-            }, index=test_dataset.ID['train'])
-        )
-    return submission
 
 
 
@@ -1030,7 +1278,7 @@ if __name__ == '__main__':
         train_hparams['loops']    = 1
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
 
-    argparse_from_dicts([train_hparams, model_hparams])
+    argparse_from_dicts([train_hparams, model_hparams], inplace=True)
 
 
     pipeline_name     = "multi_output_df_cnn"
@@ -1041,25 +1289,26 @@ if __name__ == '__main__':
 
     model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
 
+    log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
+
     submission = submission_df(model, output_shape)
     df_to_submission_csv( submission, csv_filename )
 
 
 
 #####
-##### END   src/experiments/multi_output_df_cnn.py
+##### END   src/pipelines/multi_output_df_cnn.py
 #####
 
 ##### 
-##### ./kaggle_compile.py src/experiments/multi_output_df_cnn.py --save
+##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-15 00:26:35+00:00
+##### 2020-03-17 21:00:19+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 80ad108 [ahead 1] DatasetDF | BUGFIX: np.array([ for in row ]) uses less peak memory than running block_reduce() once on entire train df
+##### * master 56e7fa6 [ahead 8] simple_triple_df_cnn | set resize=1
 ##### 
-##### 80ad10895e1771c1cd66de27d7263f2f722c65d1
+##### 56e7fa6609ed69b31eaddd1a39a901fa25067a4c
 ##### 
-##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
