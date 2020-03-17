@@ -1,6 +1,10 @@
+import time
 from typing import Dict, Union
 
+import humanize
 import simplejson
+
+from src.settings import settings
 
 
 
@@ -15,13 +19,20 @@ def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union
     return model_stats
 
 
+python_start = time.time()
 def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
     with open(logfilename, 'w') as file:
         output = [
             "------------------------------",
             f"Completed",
+            "------------------------------",
             f"model_hparams: {model_hparams}",
             f"train_hparams: {train_hparams}",
+            "------------------------------",
+        ]
+        output += [ f"settings[{key}]: {value}" for key, value in settings ]
+        output += [
+            "------------------------------",
         ]
         if isinstance(model_stats, dict):
             output.append(
@@ -35,9 +46,13 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
         else:
             output.append( str(model_stats) )
 
-        output.append(
-            "------------------------------",
-        )
+        output += [
+            f"------------------------------",
+            f"script started: {humanize.naturaltime(  python_start               )}s",
+            f"script ended:   {humanize.naturaltime(  time.time()                )}s",
+            f"script runtime: {humanize.naturaldelta( python_start - time.time() )}s",
+            f"------------------------------",
+        ]
         output = "\n".join(output)
         print(      output )
         file.write( output )
