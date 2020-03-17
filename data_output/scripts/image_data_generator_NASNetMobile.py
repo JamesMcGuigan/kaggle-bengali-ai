@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --commit
 ##### 
-##### 2020-03-16 21:01:55+00:00
+##### 2020-03-17 21:00:24+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 7053cf2 [ahead 8] kaggle_compile.py | ./data_output/scripts/image_data_generator_cnn.py
+##### * master f8911bd [ahead 9] kaggle_compile.py | ./data_output/scripts/multi_output_df_cnn.py
 ##### 
-##### 7053cf28ff1bf48174fec42c44ef26dfdebc763f
+##### f8911bdddefe25979ee9e0b4b5d39905a0ee5495
 ##### 
 
 #####
@@ -19,6 +19,8 @@
 
 # DOCS: https://www.kaggle.com/WinningModelDocumentationGuidelines
 import os
+
+import simplejson
 
 settings = {}
 
@@ -42,7 +44,11 @@ settings['hparam_defaults'] = {
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 
     # Timeout = 120 minutes | allow 30 minutes for testing submit | TODO: unsure of KAGGLE_KERNEL_RUN_TYPE on Submit
-    "timeout": "5m" if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == "Interactive" else "90m"
+    "timeout": {
+        'Localhost':   "24h",
+        'Interactive': "5m",
+        'Batch':       "110m",
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), "110m")
 }
 
 settings['verbose'] = {
@@ -78,6 +84,14 @@ else:
     }
 for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
+if __name__ == '__main__':
+    for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
+    for key,value in settings.items():       print(f"settings['{key}']:".ljust(30), str(value))
+
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        with open('settings.json', 'w') as file:
+            print( 'settings', simplejson.dumps(settings, indent=4*' '))
+            simplejson.dump(settings, file, indent=4*' ')
 
 
 #####
@@ -521,6 +535,8 @@ from typing import Union, Dict
 
 import simplejson
 
+# from src.settings import settings
+
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
     if 'val_loss' in history.history:
@@ -541,19 +557,20 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
             f"model_hparams: {model_hparams}",
             f"train_hparams: {train_hparams}",
         ]
+        output += [ f"settings[{key}]: {value}" for key, value in settings.items() ]
+        output.append("------------------------------")
+
         if isinstance(model_stats, dict):
-            simplejson.dumps(
+            output.append(simplejson.dumps(
                 { key: str(value) for key, value in model_stats.items() },
                 sort_keys=False, indent=4*' '
-            )
+            ))
         elif isinstance(model_stats, list):
             output += [ "\n".join([ str(line) for line in model_stats ]) ]
         else:
             output += [ str(model_stats) ]
 
-        output += [
-            "------------------------------",
-        ]
+        output.append("------------------------------")
         output = "\n".join(output)
         print(      output )
         file.write( output )
@@ -1031,12 +1048,14 @@ def df_to_submission(df: DataFrame) -> DataFrame:
 
 def df_to_submission_csv(df: DataFrame, filename: str):
     submission = df_to_submission(df)
-    submission.to_csv(filename, index=False)
-    print("wrote:", filename, submission.shape)
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
+    else:
+        submission.to_csv(filename, index=False)
+        print("wrote:", filename, submission.shape)
+
 
 #####
 ##### END   src/util/csv.py
@@ -1390,8 +1409,8 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
     timer_start = time.time()
     history = model.fit(
         generators['train'],
-        validation_data = generators['valid'],
-        epochs           = 99,
+        validation_data  = generators['valid'],
+        epochs           = train_hparams['epochs'],
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
         verbose          = 2,
@@ -1417,8 +1436,9 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "batch_size":    32,    # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
+        "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
+        "epochs":        99,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1449,12 +1469,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_NASNetMobile.py --commit
 ##### 
-##### 2020-03-16 21:01:55+00:00
+##### 2020-03-17 21:00:24+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 7053cf2 [ahead 8] kaggle_compile.py | ./data_output/scripts/image_data_generator_cnn.py
+##### * master f8911bd [ahead 9] kaggle_compile.py | ./data_output/scripts/multi_output_df_cnn.py
 ##### 
-##### 7053cf28ff1bf48174fec42c44ef26dfdebc763f
+##### f8911bdddefe25979ee9e0b4b5d39905a0ee5495
 ##### 
