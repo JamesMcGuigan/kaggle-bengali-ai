@@ -1,9 +1,14 @@
 # DOCS: https://www.kaggle.com/WinningModelDocumentationGuidelines
 import os
 
+import simplejson
+
+
+
 settings = {}
 
 settings['hparam_defaults'] = {
+
     "optimizer":     "RMSprop",
     "scheduler":     "constant",
     "learning_rate": 0.001,
@@ -11,16 +16,18 @@ settings['hparam_defaults'] = {
     "split":         0.2,
     "batch_size":    128,
     "fraction":      1.0,
+
     "patience": {
-        'Localhost':    5,
+        'Localhost':    10,
         'Interactive':  0,
-        'Batch':        5,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+        'Batch':        10,
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 10),
+
     "loops": {
         'Localhost':   1,
         'Interactive': 1,
         'Batch':       1,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 1),
 
     # Timeout = 120 minutes | allow 30 minutes for testing submit | TODO: unsure of KAGGLE_KERNEL_RUN_TYPE on Submit
     "timeout": {
@@ -28,21 +35,23 @@ settings['hparam_defaults'] = {
         'Interactive': "5m",
         'Batch':       "110m",
     }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), "110m")
+
 }
 
 settings['verbose'] = {
+
     "tensorboard": {
-        {
-            'Localhost':   True,
-            'Interactive': False,
-            'Batch':       False,
-        }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
-    },
+        'Localhost':   True,
+        'Interactive': False,
+        'Batch':       False,
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), False),
+
     "fit": {
         'Localhost':   1,
         'Interactive': 2,
         'Batch':       2,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 2)
+
 }
 
 if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
@@ -61,5 +70,12 @@ else:
         "submissions": "./data_output/submissions",
         "logs":        "./logs",
     }
-for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
+####################
+if __name__ == '__main__':
+    for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
+
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+        with open('settings.json', 'w') as file:
+            print( 'settings', simplejson.dumps(settings, indent=4*' '))
+            simplejson.dump(settings, file, indent=4*' ')
