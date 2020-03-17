@@ -72,9 +72,10 @@ def df_to_submission(df: DataFrame) -> DataFrame:
 
 def df_to_submission_csv(df: DataFrame, filename: str):
     submission = df_to_submission(df)
-    submission.to_csv(filename, index=False)
-    print("wrote:", filename, submission.shape)
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
+    else:
+        submission.to_csv(filename, index=False)
+        print("wrote:", filename, submission.shape)
