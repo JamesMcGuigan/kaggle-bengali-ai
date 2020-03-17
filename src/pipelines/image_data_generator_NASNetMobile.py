@@ -141,8 +141,8 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
     timer_start = time.time()
     history = model.fit(
         generators['train'],
-        validation_data = generators['valid'],
-        epochs           = 99,
+        validation_data  = generators['valid'],
+        epochs           = train_hparams['epochs'],
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
         verbose          = 2,
@@ -168,8 +168,9 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "batch_size":    32,    # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
+        "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
+        "epochs":        99,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
