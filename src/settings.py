@@ -3,8 +3,6 @@ import os
 
 import simplejson
 
-
-
 settings = {}
 
 settings['hparam_defaults'] = {
@@ -74,6 +72,7 @@ else:
 ####################
 if __name__ == '__main__':
     for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
+    for key,value in settings.items():       print(f"settings['{key}']:".ljust(30), str(value))
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         with open('settings.json', 'w') as file:
