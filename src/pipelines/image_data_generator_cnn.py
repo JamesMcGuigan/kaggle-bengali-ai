@@ -145,7 +145,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transf
     timer_start = time.time()
     history = model.fit(
         generators['train'],
-        validation_data = generators['valid'],
+        validation_data  = generators['valid'],
         epochs           = 99,
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
@@ -163,12 +163,12 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transf
 if __name__ == '__main__':
     model_hparams = {
         "cnn_units":         64,
-        "cnns_per_maxpool":   4,
-        "maxpool_layers":     6,
-        "dense_layers":       4,
-        "dense_units":     1024,
-        "regularization":  True,
-        "global_maxpool":  True,
+        "cnns_per_maxpool":   3,
+        "maxpool_layers":     5,
+        "dense_layers":       2,
+        "dense_units":      256,
+        "regularization":  False,
+        "global_maxpool":  True,   # False causes: InvalidArgumentError:  logits and labels must be broadcastable: logits_size=[128,7] labels_size=[32,7]
     }
     train_hparams = {
         "optimizer":     "RMSprop",
