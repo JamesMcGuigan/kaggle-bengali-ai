@@ -10,13 +10,13 @@ from src.dataset.DatasetDF import DatasetDF
 
 
 ### BUGFIX: Repeatedly calling model.predict(...) results in memory leak - https://github.com/keras-team/keras/issues/13118
-def submission_df(model, output_shape, transform_X_args = { "normalize": True }):
+def submission_df(model, output_shape):
     gc.collect()
 
     submission = pd.DataFrame(columns=output_shape.keys())
     # large datasets on submit, so loop
     for data_id in range(0,4):
-        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args=transform_X_args  )
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
         test_dataset_rows = test_dataset.X['train'].shape[0]
         batch_size        = 32
         for index in range(0, test_dataset_rows, 32):

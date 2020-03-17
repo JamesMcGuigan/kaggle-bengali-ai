@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow.keras import Input, Model
 from tensorflow.keras.layers import Dense, Flatten
 # noinspection DuplicatedCode
-from tensorflow_core.python.keras.layers import BatchNormalization, Dropout, GaussianNoise
+from tensorflow_core.python.keras.layers import BatchNormalization, Dropout
 
 
 def MultiOutputApplication(
@@ -26,28 +26,18 @@ def MultiOutputApplication(
     x      = inputs
 
     if application == 'NASNetMobile':
-        x = tf.keras.applications.nasnet.NASNetMobile(
+        application_model = tf.keras.applications.nasnet.NASNetMobile(
             input_shape=input_shape,
             input_tensor=inputs,
             include_top=False,
             weights=weights,
             pooling=pooling,
             classes=1000,
-        )(x)
-    if application == 'Xception':
-        x = GaussianNoise(0.1)(x)
-        x = tf.keras.applications.xception.Xception(
-            input_shape=input_shape,
-            input_tensor=inputs,
-            include_top=False,
-            weights=weights,
-            pooling=pooling,
-            classes=1000,
-        )(x)
-        x = GaussianNoise(0.1)(x)
+        )
     else:
         raise Exception(f"MultiOutputApplication() - unknown application: {application}")
 
+    x = application_model(x)
     x = Flatten(name='output')(x)
 
     for nn1 in range(0,dense_layers):

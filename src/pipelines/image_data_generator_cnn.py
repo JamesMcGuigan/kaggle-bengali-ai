@@ -20,7 +20,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Log
 
 
 
-def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transform_X_args={}):
+def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
@@ -81,12 +81,11 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transf
         # "featurewise_std_normalization": True,  # No visible effect in plt.imgshow() | requires .fit()
         # "samplewise_std_normalization": True,   # No visible effect in plt.imgshow() | requires .fit()
         # "zca_whitening": True,                   # Kaggle, insufficent memory
-        "dtype": 'float16'
     }
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": { "normalize": False, **transform_X_args },
+        "transform_X_args": { "normalize": False },
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   3,
@@ -111,10 +110,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transf
         "valid": ParquetImageDataGenerator(**datagen_args),
         "test":  ParquetImageDataGenerator(rescale=1./255),
     }
-    for key, args in flow_args.items():
-        if args.get('featurewise_center') or args.get('featurewise_std_normalization') or args.get('zca_whitening'):
-            datagens[key].fit(dataset.X['train'])
-
+    # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
     fileglobs = {
         "train": f"{settings['dir']['data']}/train_image_data_[123].parquet",
         "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
@@ -162,13 +158,12 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, transf
 
 if __name__ == '__main__':
     model_hparams = {
-        "cnn_units":         64,
         "cnns_per_maxpool":   3,
-        "maxpool_layers":     5,
+        "maxpool_layers":     4,
         "dense_layers":       2,
         "dense_units":      256,
-        "regularization":  False,
-        "global_maxpool":  True,   # False causes: InvalidArgumentError:  logits and labels must be broadcastable: logits_size=[128,7] labels_size=[32,7]
+        "regularization": False,
+        "global_maxpool": False,
     }
     train_hparams = {
         "optimizer":     "RMSprop",
@@ -177,10 +172,6 @@ if __name__ == '__main__':
         "best_only":     True,
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
-    }
-    transform_X_args = {
-        "normalize": True,
-        "resize":    1
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -196,12 +187,7 @@ if __name__ == '__main__':
     logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
     csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
 
-    model, model_stats, output_shape = image_data_generator_cnn(
-        train_hparams    = train_hparams,
-        model_hparams    = model_hparams,
-        pipeline_name    = pipeline_name,
-        transform_X_args = transform_X_args
-    )
+    model, model_stats, output_shape = image_data_generator_cnn(train_hparams, model_hparams, pipeline_name)
 
     log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
 
