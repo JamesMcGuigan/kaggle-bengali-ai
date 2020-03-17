@@ -1,11 +1,10 @@
-import time
-from typing import Dict, Union
+from typing import Union, Dict
 
+import time
 import humanize
 import simplejson
 
 from src.settings import settings
-
 
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
@@ -34,12 +33,10 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
         output.append("------------------------------")
 
         if isinstance(model_stats, dict):
-            output.append(
-                simplejson.dumps(
-                    { key: str(value) for key, value in model_stats.items() },
-                    sort_keys=False, indent=4*' '
-                    )
-                )
+            output.append(simplejson.dumps(
+                { key: str(value) for key, value in model_stats.items() },
+                sort_keys=False, indent=4*' '
+            ))
         elif isinstance(model_stats, list):
             output += list(map(str, model_stats))
         else:
