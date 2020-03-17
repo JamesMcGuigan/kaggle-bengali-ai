@@ -23,7 +23,11 @@ settings['hparam_defaults'] = {
     }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
 
     # Timeout = 120 minutes | allow 30 minutes for testing submit | TODO: unsure of KAGGLE_KERNEL_RUN_TYPE on Submit
-    "timeout": "5m" if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == "Interactive" else "90m"
+    "timeout": {
+        'Localhost':   "24h",
+        'Interactive': "5m",
+        'Batch':       "110m",
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), "110m")
 }
 
 settings['verbose'] = {
