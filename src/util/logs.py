@@ -1,6 +1,7 @@
-from typing import Union, Dict
+from typing import Dict, Union
 
 import simplejson
+
 
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
@@ -23,18 +24,20 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
             f"train_hparams: {train_hparams}",
         ]
         if isinstance(model_stats, dict):
-            simplejson.dumps(
-                { key: str(value) for key, value in model_stats.items() },
-                sort_keys=False, indent=4*' '
-            )
+            output.append(
+                simplejson.dumps(
+                    { key: str(value) for key, value in model_stats.items() },
+                    sort_keys=False, indent=4*' '
+                    )
+                )
         elif isinstance(model_stats, list):
-            output += [ "\n".join([ str(line) for line in model_stats ]) ]
+            output += list(map(str, model_stats))
         else:
-            output += [ str(model_stats) ]
+            output.append( str(model_stats) )
 
-        output += [
+        output.append(
             "------------------------------",
-        ]
+        )
         output = "\n".join(output)
         print(      output )
         file.write( output )
