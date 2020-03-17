@@ -73,6 +73,7 @@ def simple_triple_df_cnn(train_hparams, model_hparams):
                     Y_field=output_field,
                     split=train_hparams['split'],
                     fraction=train_hparams['fraction'],
+                    transform_X_args={ "normalize": True, "resize": 1 }
                 )
 
                 stats = model_compile_fit(
