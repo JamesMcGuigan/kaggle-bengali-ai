@@ -30,10 +30,9 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
             f"train_hparams: {train_hparams}",
             "------------------------------",
         ]
-        output += [ f"settings[{key}]: {value}" for key, value in settings ]
-        output += [
-            "------------------------------",
-        ]
+        output += [ f"settings[{key}]: {value}" for key, value in settings.items() ]
+        output.append("------------------------------")
+
         if isinstance(model_stats, dict):
             output.append(
                 simplejson.dumps(
@@ -46,6 +45,7 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
         else:
             output.append( str(model_stats) )
 
+        output.append("------------------------------")
         output += [
             f"------------------------------",
             f"script started: {humanize.naturaltime(  python_start               )}s",
