@@ -20,7 +20,7 @@ def submission_df(model, output_shape):
     submission = pd.DataFrame(columns=output_shape.keys())
     # large datasets on submit, so loop
     for data_id in range(0,4):
-        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = {} )  # "normalize": True is default
         test_dataset_rows = test_dataset.X['train'].shape[0]
         batch_size        = 64
         for index in range(0, test_dataset_rows, batch_size):
@@ -71,7 +71,7 @@ def submission_df_generator(model, output_shape):
                 try:
                     batch = cache[index : index+batch_size]
                     if batch.shape[0] == 0: continue
-                    X           = Transforms.transform_X(batch, normalize=True)
+                    X           = Transforms.transform_X(batch)  # normalize=True is default
                     predictions = model.predict_on_batch(X)
                     submission  = submission.append(
                         pd.DataFrame({

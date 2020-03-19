@@ -69,13 +69,13 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
 
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     datagen_args = {
-        "rescale":            1./255,
+        # "rescale":          1./255,  # "normalize": True is default
         "zoom_range":         0.2,
-        "width_shift_range":  0.1,    # we already have centering
-        "height_shift_range": 0.1,    # we already have centering
+        "width_shift_range":  0.1,     # we already have centering
+        "height_shift_range": 0.1,     # we already have centering
         "rotation_range":     45/2,
         "shear_range":        45/2,
-        # "brightness_range":   0.5,  # Prebrightness normalized
+        # "brightness_range":   0.5,   # Prebrightness normalized
         "fill_mode":         'constant',
         "cval": 0,
         # "featurewise_center": True,             # No visible effect in plt.imgshow()
@@ -87,7 +87,7 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": { "normalize": False },
+        "transform_X_args": {},  #  "normalize": True is default
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   3,

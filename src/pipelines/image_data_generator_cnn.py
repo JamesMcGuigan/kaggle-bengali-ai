@@ -65,13 +65,13 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
 
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     datagen_args = {
-        "rescale":            1./255,
+        # "rescale":          1./255,  # "normalize": True is default in Transforms
         "zoom_range":         0.2,
-        "width_shift_range":  0.1,    # we already have centering
-        "height_shift_range": 0.1,    # we already have centering
+        "width_shift_range":  0.1,     # we already have centering
+        "height_shift_range": 0.1,     # we already have centering
         "rotation_range":     45/2,
         "shear_range":        45/2,
-        # "brightness_range":   0.5,  # Prebrightness normalized
+        # "brightness_range":   0.5,   # Prebrightness normalized
         "fill_mode":         'constant',
         "cval": 0,
         # "featurewise_center": True,             # No visible effect in plt.imgshow()
@@ -83,7 +83,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": { "normalize": False },
+        "transform_X_args": {},  #  "normalize": True is default in Transforms
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   3,
@@ -105,8 +105,8 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
 
     datagens = {
         "train": ParquetImageDataGenerator(**datagen_args),
-        "valid": ParquetImageDataGenerator(**datagen_args),
-        "test":  ParquetImageDataGenerator(rescale=1./255),
+        "valid": ParquetImageDataGenerator(),
+        "test":  ParquetImageDataGenerator(),
     }
     # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
     fileglobs = {

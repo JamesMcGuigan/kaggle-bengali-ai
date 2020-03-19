@@ -49,7 +49,7 @@ class Transforms():
                     rescale=True,
                     denoise=True,
                     center=True,
-                    normalize=False,
+                    normalize=True,
     ) -> np.ndarray:
         ### Profiler: 78.7% of DatasetDF() runtime
         train = (train.drop(columns='image_id', errors='ignore')
@@ -83,7 +83,7 @@ class Transforms():
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
-        gc.collect(); # sleep(1)
+        gc.collect()  # ; sleep(1)
         return train
 
 
