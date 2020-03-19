@@ -1,4 +1,5 @@
 import os
+import re
 
 import gc
 import numpy as np
@@ -44,7 +45,8 @@ def submission_df(model, output_shape):
 def submission_df_generator(model, output_shape):
     gc.collect()
 
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         globpath = f"{settings['dir']['data']}/train_image_data_*.parquet"
     else:
         globpath = f"{settings['dir']['data']}/test_image_data_*.parquet"
@@ -58,7 +60,7 @@ def submission_df_generator(model, output_shape):
             resamples      = 1,
             shuffle        = False,
             infinite       = False,
-            ):
+    ):
         try:
             cache_index      += 1
             batch_size        = 64
@@ -75,8 +77,8 @@ def submission_df_generator(model, output_shape):
                         pd.DataFrame({
                             key: np.argmax( predictions[index], axis=-1 )
                             for index, key in enumerate(output_shape.keys())
-                            }, index=batch['image_id'])
-                        )
+                        }, index=batch['image_id'])
+                    )
                 except Exception as exception:
                     print('submission_df_generator() - batch', exception)
         except Exception as exception:
@@ -119,8 +121,13 @@ def df_to_submission(df: DataFrame) -> DataFrame:
                 'row_id': df.index + '_' + output_field,
                 'target': df[output_field],
             })
-    submission = pd.concat(submissions.values())
-    submission = submission.sort_values(by='row_id')
+
+    # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
+    submission = DataFrame(pd.concat(submissions.values()))
+    submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
+    submission = submission.sort_values(by=['sort','row_id'])
+    submission = submission.drop(columns=['sort'])
+
     print('df_to_submission_columns() - output', submission.shape)
     return submission
 
