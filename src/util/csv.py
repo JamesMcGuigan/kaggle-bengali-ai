@@ -1,5 +1,5 @@
 import os
-import re
+from itertools import chain
 
 import gc
 import numpy as np
@@ -56,14 +56,14 @@ def submission_df_generator(model, output_shape):
     cache_index = 0
     for cache in ParquetImageDataGenerator.cache_generator(
             globpath,
-            reads_per_file = 3,
+            reads_per_file = 2,
             resamples      = 1,
             shuffle        = False,
             infinite       = False,
     ):
         try:
             cache_index      += 1
-            batch_size        = 64
+            batch_size        = 128
             test_dataset_rows = cache.shape[0]
             print(f'submission_df_generator() - submission: ', cache_index, submission.shape)
             if test_dataset_rows == 0: continue
@@ -106,30 +106,48 @@ def submission_df_generator(model, output_shape):
 #     return submission
 
 
+# def df_to_submission(df: DataFrame) -> DataFrame:
+#     print('df_to_submission_columns() - input', df.shape)
+#     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
+#     submissions = {}
+#     for output_field in output_fields:
+#         if 'image_id' in df.columns:
+#             submissions[output_field] = DataFrame({
+#                 'row_id': df['image_id'] + '_' + output_field,
+#                 'target': df[output_field],
+#             })
+#         else:
+#             submissions[output_field] = DataFrame({
+#                 'row_id': df.index + '_' + output_field,
+#                 'target': df[output_field],
+#             })
+#
+#     # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
+#     submission = DataFrame(pd.concat(submissions.values()))
+#     submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
+#     submission = submission.sort_values(by=['sort','row_id'])
+#     submission = submission.drop(columns=['sort'])
+#
+#     print('df_to_submission_columns() - output', submission.shape)
+#     return submission
+
+
 def df_to_submission(df: DataFrame) -> DataFrame:
     print('df_to_submission_columns() - input', df.shape)
     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
-    submissions = {}
-    for output_field in output_fields:
-        if 'image_id' in df.columns:
-            submissions[output_field] = DataFrame({
-                'row_id': df['image_id'] + '_' + output_field,
-                'target': df[output_field],
-            })
-        else:
-            submissions[output_field] = DataFrame({
-                'row_id': df.index + '_' + output_field,
-                'target': df[output_field],
-            })
+    if 'image_id' not in df.columns:
+        df['image_id'] = df.index
 
-    # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
-    submission = DataFrame(pd.concat(submissions.values()))
-    submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
-    submission = submission.sort_values(by=['sort','row_id'])
-    submission = submission.drop(columns=['sort'])
+    submission_rows = df.apply(lambda row: [{
+        'row_id': row['image_id'] + '_' + output_field,
+        'target': row[output_field],
+    } for output_field in output_fields], axis=1, result_type='reduce' )
+
+    submission = DataFrame(chain(*submission_rows.values))   # Hopefully in original sort order
 
     print('df_to_submission_columns() - output', submission.shape)
     return submission
+
 
 
 def df_to_submission_csv(df: DataFrame, filename: str):
