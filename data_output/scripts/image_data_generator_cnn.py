@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-19 15:30:29+00:00
+##### 2020-03-19 19:15:32+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master c0c8cb3 logs | print timestamps correctly
+##### * master 44aa6ff model_fit_compile | disable loss_weights
 ##### 
-##### c0c8cb39e4486ce36ba586a1df81b05580e59f73
+##### 44aa6ffb7cd7c657fc602d36be9f5b9a6a10bbf1
 ##### 
 
 #####
@@ -107,16 +107,17 @@ if __name__ == '__main__':
 ##### START src/dataset/Transforms.py
 #####
 
-import gc
 import math
-from typing import AnyStr, Dict, Union, List
+from typing import AnyStr, Dict, List, Union
 
+import gc
 import numpy as np
 import pandas as pd
 import skimage.measure
 from pandas import DataFrame, Series
 
 # from src.settings import settings
+
 
 
 class Transforms():
@@ -191,7 +192,7 @@ class Transforms():
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
-        gc.collect(); # sleep(1)
+        gc.collect()  # ; sleep(1)
         return train
 
 
@@ -1029,7 +1030,7 @@ def submission_df(model, output_shape):
     submission = pd.DataFrame(columns=output_shape.keys())
     # large datasets on submit, so loop
     for data_id in range(0,4):
-        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = {} )  # "normalize": True is default
         test_dataset_rows = test_dataset.X['train'].shape[0]
         batch_size        = 64
         for index in range(0, test_dataset_rows, batch_size):
@@ -1080,7 +1081,7 @@ def submission_df_generator(model, output_shape):
                 try:
                     batch = cache[index : index+batch_size]
                     if batch.shape[0] == 0: continue
-                    X           = Transforms.transform_X(batch, normalize=True)
+                    X           = Transforms.transform_X(batch)  # normalize=True is default
                     predictions = model.predict_on_batch(X)
                     submission  = submission.append(
                         pd.DataFrame({
@@ -1164,19 +1165,23 @@ import math
 import os
 import re
 import time
-from typing import Dict, AnyStr, Union
+from typing import AnyStr, Dict, Union
 
 import tensorflow as tf
 from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.backend import categorical_crossentropy
-from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
-    ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
 
 # from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
 # from src.settings import settings
 # from src.util.logs import model_stats_from_history
 # from src.vendor.CLR.clr_callback import CyclicLR
+
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+tf.keras.backend.set_floatx('float16')    # Set tensorflow to use float16 as default
 
 
 def hparam_key(hparams):
@@ -1312,11 +1317,12 @@ def model_compile(
     hparams   = { **settings['hparam_defaults'], **hparams }
     optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
     loss      = losses(output_shape)
-    weights   = loss_weights(output_shape)
+    weights   = loss_weights(output_shape) if hparams.get('loss_weights') else None
 
     model.compile(
         loss=loss,
-        loss_weights=weights,
+        # loss_weights=weights,
+        loss_weights=None,
         optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
         metrics=['accuracy']
     )
@@ -1353,6 +1359,7 @@ def model_compile_fit(
     model_stats = model_stats_from_history(history, timer_seconds, best_only)
     return model_stats
 
+
 #####
 ##### END   src/util/hparam.py
 #####
@@ -1378,10 +1385,6 @@ from pyarrow.parquet import ParquetFile
 # from src.util.csv import df_to_submission_csv, submission_df_generator
 # from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_from_history
 # from src.util.logs import log_model_stats
-
-
-
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 
 
@@ -1432,13 +1435,13 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
 
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     datagen_args = {
-        "rescale":            1./255,
+        # "rescale":          1./255,  # "normalize": True is default in Transforms
         "zoom_range":         0.2,
-        "width_shift_range":  0.1,    # we already have centering
-        "height_shift_range": 0.1,    # we already have centering
+        "width_shift_range":  0.1,     # we already have centering
+        "height_shift_range": 0.1,     # we already have centering
         "rotation_range":     45/2,
         "shear_range":        45/2,
-        # "brightness_range":   0.5,  # Prebrightness normalized
+        # "brightness_range":   0.5,   # Prebrightness normalized
         "fill_mode":         'constant',
         "cval": 0,
         # "featurewise_center": True,             # No visible effect in plt.imgshow()
@@ -1450,7 +1453,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": { "normalize": False },
+        "transform_X_args": {},  #  "normalize": True is default in Transforms
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   3,
@@ -1472,8 +1475,8 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
 
     datagens = {
         "train": ParquetImageDataGenerator(**datagen_args),
-        "valid": ParquetImageDataGenerator(**datagen_args),
-        "test":  ParquetImageDataGenerator(rescale=1./255),
+        "valid": ParquetImageDataGenerator(),
+        "test":  ParquetImageDataGenerator(),
     }
     # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
     fileglobs = {
@@ -1538,6 +1541,7 @@ if __name__ == '__main__':
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
         "epochs":        99,
+        "loss_weights":  True,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1568,12 +1572,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-19 15:30:29+00:00
+##### 2020-03-19 19:15:32+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master c0c8cb3 logs | print timestamps correctly
+##### * master 44aa6ff model_fit_compile | disable loss_weights
 ##### 
-##### c0c8cb39e4486ce36ba586a1df81b05580e59f73
+##### 44aa6ffb7cd7c657fc602d36be9f5b9a6a10bbf1
 ##### 
