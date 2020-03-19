@@ -1,10 +1,12 @@
-from typing import Union, Dict
-
 import time
+from datetime import datetime
+from typing import Dict, Union
+
 import humanize
 import simplejson
 
 from src.settings import settings
+
 
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
@@ -45,9 +47,9 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
         output.append("------------------------------")
         output += [
             f"------------------------------",
-            f"script started: {humanize.naturaltime(  python_start               )}s",
-            f"script ended:   {humanize.naturaltime(  time.time()                )}s",
-            f"script runtime: {humanize.naturaldelta( python_start - time.time() )}s",
+            f"script started: { datetime.fromtimestamp( python_start ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script ended:   { datetime.fromtimestamp( time.time()  ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script runtime: { humanize.naturaldelta(  python_start - time.time() )}s",
             f"------------------------------",
         ]
         output = "\n".join(output)
