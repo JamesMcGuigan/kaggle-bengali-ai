@@ -1,13 +1,14 @@
-import gc
 import math
-from typing import AnyStr, Dict, Union, List
+from typing import AnyStr, Dict, List, Union
 
+import gc
 import numpy as np
 import pandas as pd
 import skimage.measure
 from pandas import DataFrame, Series
 
 from src.settings import settings
+
 
 
 class Transforms():
@@ -48,7 +49,7 @@ class Transforms():
                     rescale=True,
                     denoise=True,
                     center=True,
-                    normalize=True,
+                    normalize=False,
     ) -> np.ndarray:
         ### Profiler: 78.7% of DatasetDF() runtime
         train = (train.drop(columns='image_id', errors='ignore')
