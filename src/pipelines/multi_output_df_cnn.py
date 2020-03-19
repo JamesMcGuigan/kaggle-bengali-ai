@@ -9,8 +9,10 @@ from src.models.MultiOutputCNN import MultiOutputCNN
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv, submission_df
-from src.util.hparam import model_compile_fit, hparam_key
+from src.util.hparam import hparam_key, model_compile_fit
 from src.util.logs import log_model_stats
+
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
@@ -86,6 +88,7 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
                 log_dir      = log_dir,
                 best_only    = True,
                 verbose      = 2,
+                epochs       = train_hparams.get('epochs',99),
             )
             if stats is None: break  # KaggleTimeoutCallback() triggered on_train_begin()
             model_stats.append(stats)
@@ -127,6 +130,8 @@ if __name__ == '__main__':
         "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
         "loops":         3,
+        "epochs":        99,
+        "loss_weights":  True,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0

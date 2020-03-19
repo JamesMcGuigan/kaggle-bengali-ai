@@ -13,8 +13,10 @@ from src.models.MultiOutputApplication import MultiOutputApplication
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
 from src.util.csv import df_to_submission_csv, submission_df
-from src.util.hparam import hparam_key, model_compile, model_stats_from_history, callbacks
+from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_from_history
 from src.util.logs import log_model_stats
+
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
@@ -171,6 +173,7 @@ if __name__ == '__main__':
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
         "epochs":        99,
+        "loss_weights":  True,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0

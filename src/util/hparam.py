@@ -2,19 +2,19 @@ import math
 import os
 import re
 import time
-from typing import Dict, AnyStr, Union
+from typing import AnyStr, Dict, Union
 
 import tensorflow as tf
 from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.backend import categorical_crossentropy
-from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
-    ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
 
 from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 from src.dataset.DatasetDF import DatasetDF
 from src.settings import settings
 from src.util.logs import model_stats_from_history
 from src.vendor.CLR.clr_callback import CyclicLR
+
 
 
 def hparam_key(hparams):
@@ -150,7 +150,7 @@ def model_compile(
     hparams   = { **settings['hparam_defaults'], **hparams }
     optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
     loss      = losses(output_shape)
-    weights   = loss_weights(output_shape)
+    weights   = loss_weights(output_shape) if hparams.get('loss_weights') else None
 
     model.compile(
         loss=loss,

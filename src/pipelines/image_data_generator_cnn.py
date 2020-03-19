@@ -175,6 +175,7 @@ if __name__ == '__main__':
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
         "epochs":        99,
+        "loss_weights":  True,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
         train_hparams['patience'] = 0
