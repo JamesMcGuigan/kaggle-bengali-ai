@@ -17,6 +17,10 @@ from src.vendor.CLR.clr_callback import CyclicLR
 
 
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+tf.keras.backend.set_floatx('float16')    # Set tensorflow to use float16 as default
+
+
 def hparam_key(hparams):
     return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
 

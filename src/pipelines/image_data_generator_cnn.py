@@ -18,10 +18,6 @@ from src.util.logs import log_model_stats
 
 
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
-
-
-
 def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
