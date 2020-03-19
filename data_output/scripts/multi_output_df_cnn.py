@@ -1,18 +1,17 @@
 #!/usr/bin/env python3
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --save
+##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-17 21:03:32+00:00
+##### 2020-03-19 15:30:56+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master dc13e09 [ahead 12] settings | fix verbose['tensorboard']
+##### * master 5bdf259 [ahead 2] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
 ##### 
-##### dc13e0986a5781c9ecba14e759998473bb56fd33
+##### 5bdf2593967f27c8e6cec7b37a1a81d0c8ca53e1
 ##### 
-##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
 
 #####
 ##### START src/settings.py
@@ -26,6 +25,7 @@ import simplejson
 settings = {}
 
 settings['hparam_defaults'] = {
+
     "optimizer":     "RMSprop",
     "scheduler":     "constant",
     "learning_rate": 0.001,
@@ -33,16 +33,18 @@ settings['hparam_defaults'] = {
     "split":         0.2,
     "batch_size":    128,
     "fraction":      1.0,
+
     "patience": {
-        'Localhost':    5,
+        'Localhost':    10,
         'Interactive':  0,
-        'Batch':        5,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+        'Batch':        10,
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 10),
+
     "loops": {
         'Localhost':   1,
         'Interactive': 1,
         'Batch':       1,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 1),
 
     # Timeout = 120 minutes | allow 30 minutes for testing submit | TODO: unsure of KAGGLE_KERNEL_RUN_TYPE on Submit
     "timeout": {
@@ -50,20 +52,23 @@ settings['hparam_defaults'] = {
         'Interactive': "5m",
         'Batch':       "110m",
     }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), "110m")
+
 }
 
 settings['verbose'] = {
+
     "tensorboard": {
-            'Localhost':   True,
-            'Interactive': False,
-            'Batch':       False,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')],
+        'Localhost':   True,
+        'Interactive': False,
+        'Batch':       False,
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), False),
 
     "fit": {
         'Localhost':   1,
         'Interactive': 2,
         'Batch':       2,
-    }[os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost')]
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 2)
+
 }
 
 if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
@@ -82,8 +87,8 @@ else:
         "submissions": "./data_output/submissions",
         "logs":        "./logs",
     }
-for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
 
+####################
 if __name__ == '__main__':
     for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
     for key,value in settings.items():       print(f"settings['{key}']:".ljust(30), str(value))
@@ -531,11 +536,15 @@ if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 ##### START src/util/logs.py
 #####
 
-from typing import Union, Dict
+import time
+from datetime import datetime
+from typing import Dict, Union
 
+import humanize
 import simplejson
 
 # from src.settings import settings
+
 
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
@@ -549,13 +558,16 @@ def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union
     return model_stats
 
 
+python_start = time.time()
 def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
     with open(logfilename, 'w') as file:
         output = [
             "------------------------------",
             f"Completed",
+            "------------------------------",
             f"model_hparams: {model_hparams}",
             f"train_hparams: {train_hparams}",
+            "------------------------------",
         ]
         output += [ f"settings[{key}]: {value}" for key, value in settings.items() ]
         output.append("------------------------------")
@@ -566,11 +578,18 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
                 sort_keys=False, indent=4*' '
             ))
         elif isinstance(model_stats, list):
-            output += [ "\n".join([ str(line) for line in model_stats ]) ]
+            output += list(map(str, model_stats))
         else:
-            output += [ str(model_stats) ]
+            output.append( str(model_stats) )
 
         output.append("------------------------------")
+        output += [
+            f"------------------------------",
+            f"script started: { datetime.fromtimestamp( python_start ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script ended:   { datetime.fromtimestamp( time.time()  ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script runtime: { humanize.naturaldelta(  python_start - time.time() )}s",
+            f"------------------------------",
+        ]
         output = "\n".join(output)
         print(      output )
         file.write( output )
@@ -725,6 +744,143 @@ class CyclicLR(Callback):
 #####
 
 #####
+##### START src/dataset/ParquetImageDataGenerator.py
+#####
+
+# Notebook: https://www.kaggle.com/jamesmcguigan/reading-parquet-files-ram-cpu-optimization/
+# Notebook: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
+import gc
+import math
+from collections import Callable
+
+import glob2
+import pandas as pd
+from keras_preprocessing.image import ImageDataGenerator
+from pyarrow.parquet import ParquetFile
+
+
+class ParquetImageDataGenerator(ImageDataGenerator):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+
+    def flow_from_parquet(
+            self,
+            glob_path:       str,
+            transform_X:     Callable,
+            transform_Y:     Callable,
+            transform_X_args = {},
+            transform_Y_args = {},
+            batch_size       = 32,
+            reads_per_file   = 2,
+            resamples        = 1,
+            shuffle          = False,
+            infinite         = True,
+            test             = False,
+    ):
+        """
+            Source: ./venv/lib/python3.6/site-packages/keras_preprocessing/image/image_data_generator.py
+            # Returns
+            An `Iterator` yielding tuples of `(x, y)`
+                where `x` is a numpy array of image data
+                (in the case of a single image input) or a list
+                of numpy arrays (in the case with
+                additional inputs) and `y` is a numpy array
+                of corresponding labels. If 'sample_weight' is not None,
+                the yielded tuples are of the form `(x, y, sample_weight)`.
+                If `y` is None, only the numpy array `x` is returned.
+        """
+        if test:
+            shuffle  = False
+            infinite = False
+
+        for (X,Y) in self.cache_XY_generator(
+                glob_path=glob_path,
+                transform_X=transform_X,
+                transform_X_args=transform_X_args,
+                transform_Y=transform_Y,
+                transform_Y_args=transform_Y_args,
+                reads_per_file=reads_per_file,
+                resamples=resamples,
+                shuffle=shuffle,
+                infinite=infinite,
+        ):
+            cache_size  = X.shape[0]
+            batch_count = math.ceil( cache_size / batch_size )
+            for n_batch in range(batch_count):
+                X_batch = X[ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
+                if isinstance(Y, dict):
+                    Y_batch = {
+                        key: Y[key][ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
+                        for key in Y.keys()
+                    }
+                else:
+                    Y_batch = Y[ batch_size * n_batch : batch_size * (n_batch+1) ].copy()
+                yield ( X_batch, Y_batch )
+
+
+    @classmethod
+    def cache_XY_generator(
+            cls,
+            glob_path:        str,
+            transform_X:      Callable,
+            transform_X_args: {},
+            transform_Y:      Callable,
+            transform_Y_args: {},
+            reads_per_file  = 3,
+            resamples       = 1,
+            shuffle         = False,
+            infinite        = False,
+    ):
+        for cache in cls.cache_generator(
+                glob_path=glob_path,
+                reads_per_file=reads_per_file,
+                resamples=resamples,
+                shuffle=shuffle,
+                infinite=infinite,
+        ):
+            X = transform_X(cache, **transform_X_args)
+            Y = transform_Y(cache, **transform_Y_args)
+            yield (X, Y)
+
+
+    @classmethod
+    def cache_generator(
+            cls,
+            glob_path,
+            reads_per_file = 3,
+            resamples      = 1,
+            shuffle        = False,
+            infinite       = False,
+    ):
+        filenames = sorted(glob2.glob(glob_path))
+        if len(filenames) == 0: raise Exception(f"{cls.__name__}.batch_generator() - invalid glob_path: {glob_path}")
+
+        gc.collect();  # sleep(1)   # sleep(1) is required to allow measurement of the garbage collector
+        while True:
+            for filename in filenames:
+                num_rows    = ParquetFile(filename).metadata.num_rows
+                cache_size  = math.ceil( num_rows / reads_per_file )
+                for n_read in range(reads_per_file):
+                    gc.collect();  # sleep(1)   # sleep(1) is required to allow measurement of the garbage collector
+                    cache = (
+                        pd.read_parquet(filename)
+                            # .set_index('image_id', drop=True)  # WARN: Don't do this, it breaks other things
+                            .iloc[ cache_size * n_read : cache_size * (n_read+1) ]
+                            .copy()
+                    )
+                    for resample in range(resamples):
+                        if shuffle:
+                            cache = cache.sample(frac=1)
+                        yield cache
+            if not infinite: break
+
+#####
+##### END   src/dataset/ParquetImageDataGenerator.py
+#####
+
+#####
 ##### START src/models/MultiOutputCNN.py
 #####
 
@@ -851,15 +1007,19 @@ def argparse_from_dict(config: Dict, inplace=False):
 ##### START src/util/csv.py
 #####
 
-import gc
 import os
+import re
 
+import gc
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
 
-### Predict Output Submssion
 # from src.dataset.DatasetDF import DatasetDF
+# from src.dataset.ParquetImageDataGenerator import ParquetImageDataGenerator
+# from src.dataset.Transforms import Transforms
+# from src.settings import settings
+
 
 
 ### BUGFIX: Repeatedly calling model.predict(...) results in memory leak - https://github.com/keras-team/keras/issues/13118
@@ -871,55 +1031,113 @@ def submission_df(model, output_shape):
     for data_id in range(0,4):
         test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
         test_dataset_rows = test_dataset.X['train'].shape[0]
-        batch_size        = 32
-        for index in range(0, test_dataset_rows, 32):
-            X_batch     = test_dataset.X['train'][index : index+batch_size]
-            predictions = model.predict_on_batch(X_batch)
-            # noinspection PyTypeChecker
-            submission = submission.append(
-                pd.DataFrame({
-                    key: np.argmax( predictions[index], axis=-1 )
-                    for index, key in enumerate(output_shape.keys())
-                }, index=test_dataset.ID['train'])
-            )
-    return submission
+        batch_size        = 64
+        for index in range(0, test_dataset_rows, batch_size):
+            try:
+                X_batch     = test_dataset.X['train'][index : index+batch_size]
+                predictions = model.predict_on_batch(X_batch)
+                # noinspection PyTypeChecker
+                submission = submission.append(
+                    pd.DataFrame({
+                        key: np.argmax( predictions[index], axis=-1 )
+                        for index, key in enumerate(output_shape.keys())
+                        }, index=test_dataset.ID['train'])
+                    )
+            except Exception as exception:
+                print('submission_df_generator()', exception)
+
+        return submission
 
 ###
 ### Use submission_df() it seems to have more success on Kaggle
 ###
-# def submission_df_generator(model, output_shape):
-#     gc.collect(); sleep(5)
-#
-#     # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
-#     submission = pd.DataFrame(columns=output_shape.keys())
-#     for batch in ParquetImageDataGenerator.batch_generator(
-#         f"{settings['dir']['data']}/test_image_data_*.parquet",
-#         reads_per_file = 3,
-#         resamples      = 1,
-#         shuffle        = False,
-#         infinite       = False,
-#     ):
-#         X = Transforms.transform_X(batch, normalize=True)
-#         predictions = model.predict_on_batch(X)
-#         submission = submission.append(
-#             pd.DataFrame({
-#                 key: np.argmax( predictions[index], axis=-1 )
-#                 for index, key in enumerate(output_shape.keys())
-#             }, index=batch['image_id'])
-#         )
+def submission_df_generator(model, output_shape):
+    gc.collect()
+
+    # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
+        globpath = f"{settings['dir']['data']}/train_image_data_*.parquet"
+    else:
+        globpath = f"{settings['dir']['data']}/test_image_data_*.parquet"
+
+    # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
+    submission  = pd.DataFrame(columns=output_shape.keys())
+    cache_index = 0
+    for cache in ParquetImageDataGenerator.cache_generator(
+            globpath,
+            reads_per_file = 3,
+            resamples      = 1,
+            shuffle        = False,
+            infinite       = False,
+    ):
+        try:
+            cache_index      += 1
+            batch_size        = 64
+            test_dataset_rows = cache.shape[0]
+            print(f'submission_df_generator() - submission: ', cache_index, submission.shape)
+            if test_dataset_rows == 0: continue
+            for index in range(0, test_dataset_rows, batch_size):
+                try:
+                    batch = cache[index : index+batch_size]
+                    if batch.shape[0] == 0: continue
+                    X           = Transforms.transform_X(batch, normalize=True)
+                    predictions = model.predict_on_batch(X)
+                    submission  = submission.append(
+                        pd.DataFrame({
+                            key: np.argmax( predictions[index], axis=-1 )
+                            for index, key in enumerate(output_shape.keys())
+                        }, index=batch['image_id'])
+                    )
+                except Exception as exception:
+                    print('submission_df_generator() - batch', exception)
+        except Exception as exception:
+            print('submission_df_generator() - cache', exception)
+
+    return submission
+
+
+
+# def df_to_submission(df: DataFrame) -> DataFrame:
+#     print('df_to_submission() - input', df.shape)
+#     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
+#     submission = DataFrame(columns=['row_id', 'target'])
+#     for index, row in df.iterrows():
+#         for output_field in output_fields:
+#             try:
+#                 index = f"Test_{index}" if not str(index).startswith('T') else index
+#                 submission = submission.append({
+#                     'row_id': f"{index}_{output_field}",
+#                     'target': df[output_field].loc[index],
+#                     }, ignore_index=True)
+#             except Exception as exception:
+#                 print('df_to_submission()', exception)
+#     print('df_to_submission() - output', submission.shape)
 #     return submission
 
 
 def df_to_submission(df: DataFrame) -> DataFrame:
+    print('df_to_submission_columns() - input', df.shape)
     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
-    submission = DataFrame(columns=['row_id', 'target'])
-    for index, row in df.iterrows():
-        for output_field in output_fields:
-            index = f"Test_{index}" if not str(index).startswith('T') else index
-            submission = submission.append({
-                'row_id': f"{index}_{output_field}",
-                'target': df[output_field].loc[index],
-            }, ignore_index=True)
+    submissions = {}
+    for output_field in output_fields:
+        if 'image_id' in df.columns:
+            submissions[output_field] = DataFrame({
+                'row_id': df['image_id'] + '_' + output_field,
+                'target': df[output_field],
+            })
+        else:
+            submissions[output_field] = DataFrame({
+                'row_id': df.index + '_' + output_field,
+                'target': df[output_field],
+            })
+
+    # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
+    submission = DataFrame(pd.concat(submissions.values()))
+    submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
+    submission = submission.sort_values(by=['sort','row_id'])
+    submission = submission.drop(columns=['sort'])
+
+    print('df_to_submission_columns() - output', submission.shape)
     return submission
 
 
@@ -1301,15 +1519,14 @@ if __name__ == '__main__':
 #####
 
 ##### 
-##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --save
+##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-17 21:03:32+00:00
+##### 2020-03-19 15:30:56+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master dc13e09 [ahead 12] settings | fix verbose['tensorboard']
+##### * master 5bdf259 [ahead 2] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
 ##### 
-##### dc13e0986a5781c9ecba14e759998473bb56fd33
+##### 5bdf2593967f27c8e6cec7b37a1a81d0c8ca53e1
 ##### 
-##### Wrote: ./data_output/scripts/multi_output_df_cnn.py
