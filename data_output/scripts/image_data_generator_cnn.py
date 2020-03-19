@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-18 22:14:14+00:00
+##### 2020-03-19 15:30:29+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master d6382b2 [ahead 1] csv | optimise submission.csv for Kaggle
+##### * master c0c8cb3 logs | print timestamps correctly
 ##### 
-##### d6382b24c0a88508562e3a394f15ddd915225b02
+##### c0c8cb39e4486ce36ba586a1df81b05580e59f73
 ##### 
 
 #####
@@ -536,13 +536,15 @@ if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 ##### START src/util/logs.py
 #####
 
-from typing import Union, Dict
-
 import time
+from datetime import datetime
+from typing import Dict, Union
+
 import humanize
 import simplejson
 
 # from src.settings import settings
+
 
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
@@ -583,9 +585,9 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
         output.append("------------------------------")
         output += [
             f"------------------------------",
-            f"script started: {humanize.naturaltime(  python_start               )}s",
-            f"script ended:   {humanize.naturaltime(  time.time()                )}s",
-            f"script runtime: {humanize.naturaldelta( python_start - time.time() )}s",
+            f"script started: { datetime.fromtimestamp( python_start ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script ended:   { datetime.fromtimestamp( time.time()  ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script runtime: { humanize.naturaldelta(  python_start - time.time() )}s",
             f"------------------------------",
         ]
         output = "\n".join(output)
@@ -1006,6 +1008,7 @@ def argparse_from_dict(config: Dict, inplace=False):
 #####
 
 import os
+import re
 
 import gc
 import numpy as np
@@ -1051,7 +1054,8 @@ def submission_df(model, output_shape):
 def submission_df_generator(model, output_shape):
     gc.collect()
 
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         globpath = f"{settings['dir']['data']}/train_image_data_*.parquet"
     else:
         globpath = f"{settings['dir']['data']}/test_image_data_*.parquet"
@@ -1065,7 +1069,7 @@ def submission_df_generator(model, output_shape):
             resamples      = 1,
             shuffle        = False,
             infinite       = False,
-            ):
+    ):
         try:
             cache_index      += 1
             batch_size        = 64
@@ -1082,8 +1086,8 @@ def submission_df_generator(model, output_shape):
                         pd.DataFrame({
                             key: np.argmax( predictions[index], axis=-1 )
                             for index, key in enumerate(output_shape.keys())
-                            }, index=batch['image_id'])
-                        )
+                        }, index=batch['image_id'])
+                    )
                 except Exception as exception:
                     print('submission_df_generator() - batch', exception)
         except Exception as exception:
@@ -1126,8 +1130,13 @@ def df_to_submission(df: DataFrame) -> DataFrame:
                 'row_id': df.index + '_' + output_field,
                 'target': df[output_field],
             })
-    submission = pd.concat(submissions.values())
-    submission = submission.sort_values(by='row_id')
+
+    # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
+    submission = DataFrame(pd.concat(submissions.values()))
+    submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
+    submission = submission.sort_values(by=['sort','row_id'])
+    submission = submission.drop(columns=['sort'])
+
     print('df_to_submission_columns() - output', submission.shape)
     return submission
 
@@ -1559,12 +1568,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-18 22:14:14+00:00
+##### 2020-03-19 15:30:29+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master d6382b2 [ahead 1] csv | optimise submission.csv for Kaggle
+##### * master c0c8cb3 logs | print timestamps correctly
 ##### 
-##### d6382b24c0a88508562e3a394f15ddd915225b02
+##### c0c8cb39e4486ce36ba586a1df81b05580e59f73
 ##### 
