@@ -158,7 +158,8 @@ def model_compile(
 
     model.compile(
         loss=loss,
-        loss_weights=weights,
+        # loss_weights=weights,
+        loss_weights=None,
         optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
         metrics=['accuracy']
     )
