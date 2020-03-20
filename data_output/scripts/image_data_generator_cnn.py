@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-19 19:15:32+00:00
+##### 2020-03-20 16:06:08+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 44aa6ff model_fit_compile | disable loss_weights
+##### * master 83f6a99 image_data_generator_cnn | allow localhost to run pipeline to convergence
 ##### 
-##### 44aa6ffb7cd7c657fc602d36be9f5b9a6a10bbf1
+##### 83f6a99ea22244a2f0593bac9dfec8e933892bea
 ##### 
 
 #####
@@ -1009,7 +1009,7 @@ def argparse_from_dict(config: Dict, inplace=False):
 #####
 
 import os
-import re
+from itertools import chain
 
 import gc
 import numpy as np
@@ -1066,14 +1066,14 @@ def submission_df_generator(model, output_shape):
     cache_index = 0
     for cache in ParquetImageDataGenerator.cache_generator(
             globpath,
-            reads_per_file = 3,
+            reads_per_file = 2,
             resamples      = 1,
             shuffle        = False,
             infinite       = False,
     ):
         try:
             cache_index      += 1
-            batch_size        = 64
+            batch_size        = 128
             test_dataset_rows = cache.shape[0]
             print(f'submission_df_generator() - submission: ', cache_index, submission.shape)
             if test_dataset_rows == 0: continue
@@ -1116,30 +1116,48 @@ def submission_df_generator(model, output_shape):
 #     return submission
 
 
+# def df_to_submission(df: DataFrame) -> DataFrame:
+#     print('df_to_submission_columns() - input', df.shape)
+#     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
+#     submissions = {}
+#     for output_field in output_fields:
+#         if 'image_id' in df.columns:
+#             submissions[output_field] = DataFrame({
+#                 'row_id': df['image_id'] + '_' + output_field,
+#                 'target': df[output_field],
+#             })
+#         else:
+#             submissions[output_field] = DataFrame({
+#                 'row_id': df.index + '_' + output_field,
+#                 'target': df[output_field],
+#             })
+#
+#     # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
+#     submission = DataFrame(pd.concat(submissions.values()))
+#     submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
+#     submission = submission.sort_values(by=['sort','row_id'])
+#     submission = submission.drop(columns=['sort'])
+#
+#     print('df_to_submission_columns() - output', submission.shape)
+#     return submission
+
+
 def df_to_submission(df: DataFrame) -> DataFrame:
     print('df_to_submission_columns() - input', df.shape)
     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
-    submissions = {}
-    for output_field in output_fields:
-        if 'image_id' in df.columns:
-            submissions[output_field] = DataFrame({
-                'row_id': df['image_id'] + '_' + output_field,
-                'target': df[output_field],
-            })
-        else:
-            submissions[output_field] = DataFrame({
-                'row_id': df.index + '_' + output_field,
-                'target': df[output_field],
-            })
+    if 'image_id' not in df.columns:
+        df['image_id'] = df.index
 
-    # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
-    submission = DataFrame(pd.concat(submissions.values()))
-    submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
-    submission = submission.sort_values(by=['sort','row_id'])
-    submission = submission.drop(columns=['sort'])
+    submission_rows = df.apply(lambda row: [{
+        'row_id': row['image_id'] + '_' + output_field,
+        'target': row[output_field],
+    } for output_field in output_fields], axis=1, result_type='reduce' )
+
+    submission = DataFrame(chain(*submission_rows.values))   # Hopefully in original sort order
 
     print('df_to_submission_columns() - output', submission.shape)
     return submission
+
 
 
 def df_to_submission_csv(df: DataFrame, filename: str):
@@ -1177,8 +1195,6 @@ from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, Mod
 # from src.settings import settings
 # from src.util.logs import model_stats_from_history
 # from src.vendor.CLR.clr_callback import CyclicLR
-
-
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 tf.keras.backend.set_floatx('float16')    # Set tensorflow to use float16 as default
@@ -1321,8 +1337,7 @@ def model_compile(
 
     model.compile(
         loss=loss,
-        # loss_weights=weights,
-        loss_weights=None,
+        loss_weights=weights,
         optimizer=optimiser(learning_rate=hparams.get('learning_rate', 0.001)),
         metrics=['accuracy']
     )
@@ -1385,7 +1400,6 @@ from pyarrow.parquet import ParquetFile
 # from src.util.csv import df_to_submission_csv, submission_df_generator
 # from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_from_history
 # from src.util.logs import log_model_stats
-
 
 
 def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
@@ -1541,9 +1555,9 @@ if __name__ == '__main__':
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
         "epochs":        99,
-        "loss_weights":  True,
+        "loss_weights":  False,
     }
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
         train_hparams['epochs']   = 0
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
@@ -1572,12 +1586,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-19 19:15:32+00:00
+##### 2020-03-20 16:06:08+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 44aa6ff model_fit_compile | disable loss_weights
+##### * master 83f6a99 image_data_generator_cnn | allow localhost to run pipeline to convergence
 ##### 
-##### 44aa6ffb7cd7c657fc602d36be9f5b9a6a10bbf1
+##### 83f6a99ea22244a2f0593bac9dfec8e933892bea
 ##### 
