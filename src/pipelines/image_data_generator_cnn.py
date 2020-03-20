@@ -172,7 +172,7 @@ if __name__ == '__main__':
         "epochs":        99,
         "loss_weights":  False,
     }
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
+    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
         train_hparams['epochs']   = 0
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
