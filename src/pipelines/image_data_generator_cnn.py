@@ -169,12 +169,12 @@ if __name__ == '__main__':
         "best_only":     True,
         "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
-        "epochs":        99,
+        "epochs":        999,
         "loss_weights":  False,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
-        train_hparams['epochs']   = 0
+        train_hparams['epochs']   = 1
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
 
     argparse_from_dicts([train_hparams, model_hparams], inplace=True)

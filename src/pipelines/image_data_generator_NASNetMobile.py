@@ -107,8 +107,8 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
 
     datagens = {
         "train": ParquetImageDataGenerator(**datagen_args),
-        "valid": ParquetImageDataGenerator(**datagen_args),
-        "test":  ParquetImageDataGenerator(rescale=1./255),
+        "valid": ParquetImageDataGenerator(),
+        "test":  ParquetImageDataGenerator(),
     }
     # [ datagens[key].fit(train_batch) for key in datagens.keys() ]  # Not required
     fileglobs = {
@@ -168,18 +168,17 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
+        "batch_size":    64,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
-        "epochs":        99,
+        "epochs":        999,
         "loss_weights":  False,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
-        train_hparams['loops']    = 1
+        train_hparams['epochs']   = 1
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
 
     argparse_from_dicts([train_hparams, model_hparams], inplace=True)
-
 
     pipeline_name     = "image_data_generator_application_NASNetMobile"
     model_hparams_key = hparam_key(model_hparams)
