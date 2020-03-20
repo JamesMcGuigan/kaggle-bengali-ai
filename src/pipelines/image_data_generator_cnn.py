@@ -17,7 +17,6 @@ from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_fr
 from src.util.logs import log_model_stats
 
 
-
 def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
@@ -171,7 +170,7 @@ if __name__ == '__main__':
         "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
         "epochs":        99,
-        "loss_weights":  True,
+        "loss_weights":  False,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
         train_hparams['patience'] = 0
