@@ -39,6 +39,7 @@ def image_data_generator_cnn_search(
         "patience":      10,
         "epochs":        99,
         "loss_weights":  False,
+        "timeout":       "6h"
     }
     combninations   = hparam_combninations(model_hparam_options)
     logdir          = hparam_logdir(combninations[0], model_hparam_options, settings['dir']['logs'])
