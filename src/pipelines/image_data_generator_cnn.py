@@ -51,12 +51,12 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         except Exception as exception: print('exception', exception)
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        load_models = glob2.glob(f'../input/**/{model_file}')
+        load_models = glob2.glob(f'../input/**/{os.path.basename(model_file)}')
         for load_model in load_models:
             try:
                 model.load_weights( load_model )
                 print('Loaded Weights: ', load_model)
-                break
+                # break
             except Exception as exception: print('exception', exception)
 
     model.summary()

@@ -16,9 +16,6 @@ from src.util.csv import df_to_submission_csv, submission_df
 from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_from_history
 from src.util.logs import log_model_stats
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
-
-
 
 def image_data_generator_application(train_hparams, model_hparams, pipeline_name):
     print("pipeline_name", pipeline_name)
@@ -54,12 +51,12 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
         except Exception as exception: print('exception', exception)
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        load_models = glob2.glob(f'../input/**/{model_file}')
+        load_models = glob2.glob(f'../input/**/{os.path.basename(model_file)}')
         for load_model in load_models:
             try:
                 model.load_weights( load_model )
                 print('Loaded Weights: ', load_model)
-                break
+                # break
             except Exception as exception: print('exception', exception)
 
     model.summary()
@@ -67,7 +64,7 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
 
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     datagen_args = {
-        # "rescale":          1./255,  # "normalize": True is default
+        # "rescale":          1./255,  # "normalize": True is default in Transforms
         "zoom_range":         0.2,
         "width_shift_range":  0.1,     # we already have centering
         "height_shift_range": 0.1,     # we already have centering
@@ -85,7 +82,7 @@ def image_data_generator_application(train_hparams, model_hparams, pipeline_name
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": {},  #  "normalize": True is default
+        "transform_X_args": {},  #  "normalize": True is default in Transforms
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   3,
