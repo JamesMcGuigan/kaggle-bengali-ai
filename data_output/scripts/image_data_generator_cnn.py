@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-22 15:26:42+00:00
+##### 2020-03-22 15:43:51+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master dc54895 [ahead 2] image_data_generator_cnn | load kaggle model_file from any ../input/ subdirectory
+##### * master 3486e96 [ahead 5] image_data_generator_cnn | load kaggle model_file | Kaggle Dataset Upload removes '='
 ##### 
-##### dc54895d881c0e6efe9e2adbde8e03d80c0ace12
+##### 3486e962d8f4e8e9080fc10c5de2d864f3000fdd
 ##### 
 
 #####
@@ -90,7 +90,9 @@ else:
 
 ####################
 if __name__ == '__main__':
-    for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
+    for dirname in settings['dir'].values():
+        try:    os.makedirs(dirname, exist_ok=True)  # BUGFIX: read-only filesystem
+        except: pass
     for key,value in settings.items():       print(f"settings['{key}']:".ljust(30), str(value))
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
@@ -1436,7 +1438,8 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         except Exception as exception: print('exception', exception)
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        load_models = glob2.glob(f'../input/**/{os.path.basename(model_file)}')
+        load_models = (glob2.glob(f'../input/**/{os.path.basename(model_file)}')
+                    +  glob2.glob(f'../input/**/{os.path.basename(model_file)}'.replace('=','')))  # Kaggle Dataset Upload removes '='
         for load_model in load_models:
             try:
                 model.load_weights( load_model )
@@ -1586,12 +1589,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-22 15:26:42+00:00
+##### 2020-03-22 15:43:51+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master dc54895 [ahead 2] image_data_generator_cnn | load kaggle model_file from any ../input/ subdirectory
+##### * master 3486e96 [ahead 5] image_data_generator_cnn | load kaggle model_file | Kaggle Dataset Upload removes '='
 ##### 
-##### dc54895d881c0e6efe9e2adbde8e03d80c0ace12
+##### 3486e962d8f4e8e9080fc10c5de2d864f3000fdd
 ##### 
