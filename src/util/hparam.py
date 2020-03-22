@@ -20,7 +20,7 @@ tf.keras.backend.set_floatx('float16')    # Set tensorflow to use float16 as def
 
 
 def hparam_key(hparams):
-    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
+    return "-".join( f"{key}={value}" for key,value in sorted(hparams.items()) ).replace(' ','')
 
 
 def min_lr(hparams):

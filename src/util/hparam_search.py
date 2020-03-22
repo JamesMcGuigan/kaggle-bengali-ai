@@ -12,9 +12,10 @@ from src.util import hparam
 
 
 def hparam_options_length(hparam_options_value) -> int:
-    if isinstance(hparam_options_value, (dict,list)): return len(hparam_options_value)
-    else:                                             return len(hparam_options_value.values)
-
+    try:
+        if isinstance(hparam_options_value, (dict,list)): return len(hparam_options_value)
+        else:                                             return len(hparam_options_value.values)
+    except: return 1
 
 
 def hparam_run_name(hparams: Dict, hparam_options: Dict) -> AnyStr:
@@ -47,6 +48,7 @@ def hparam_combninations(hparam_options: Dict) -> List[Dict]:
         if isinstance(hparam_options[key], dict):        return hparam_options[key].keys()
         if isinstance(hparam_options[key], list):        return hparam_options[key]
         if isinstance(hparam_options[key], hp.Discrete): return hparam_options[key].values
+        else:                                            return [ hparam_options[key] ]     # Single value
 
     keys = hparam_options.keys()
     values = [ get_hparam_options_values(key) for key in keys ]

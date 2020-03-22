@@ -17,7 +17,7 @@ from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_fr
 from src.util.logs import log_model_stats
 
 
-def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
+def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, model_file=None, log_dir=None, verbose=2):
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
@@ -26,8 +26,8 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     train_hparams_key = hparam_key(train_hparams)
 
     # csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
-    model_file  = f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
-    log_dir     = f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
+    model_file  = model_file or f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
+    log_dir     = log_dir    or f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
 
     os.makedirs(os.path.dirname(model_file), exist_ok=True)
     os.makedirs(log_dir,                     exist_ok=True)
@@ -60,8 +60,8 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
                 # break
             except Exception as exception: print('exception', exception)
 
-    model.summary()
-
+    if verbose:
+        model.summary()
 
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     datagen_args = {
@@ -143,7 +143,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         epochs           = train_hparams['epochs'],
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
-        verbose          = 2,
+        verbose          = verbose,
         callbacks        = callback
     )
     timer_seconds = int(time.time() - timer_start)
