@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-20 16:06:08+00:00
+##### 2020-03-22 15:05:39+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 83f6a99 image_data_generator_cnn | allow localhost to run pipeline to convergence
+##### * master 416bb44 image_data_generator_cnn | run model to convergence
 ##### 
-##### 83f6a99ea22244a2f0593bac9dfec8e933892bea
+##### 416bb449cb9621a5bd126e077580d73bee146749
 ##### 
 
 #####
@@ -1552,14 +1552,14 @@ if __name__ == '__main__':
         "scheduler":     "constant",
         "learning_rate": 0.001,
         "best_only":     True,
-        "batch_size":    32,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
+        "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         "patience":      10,
-        "epochs":        99,
+        "epochs":        999,
         "loss_weights":  False,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
-        train_hparams['epochs']   = 0
+        train_hparams['epochs']   = 1
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
 
     argparse_from_dicts([train_hparams, model_hparams], inplace=True)
@@ -1586,12 +1586,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-20 16:06:08+00:00
+##### 2020-03-22 15:05:39+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 83f6a99 image_data_generator_cnn | allow localhost to run pipeline to convergence
+##### * master 416bb44 image_data_generator_cnn | run model to convergence
 ##### 
-##### 83f6a99ea22244a2f0593bac9dfec8e933892bea
+##### 416bb449cb9621a5bd126e077580d73bee146749
 ##### 
