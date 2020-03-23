@@ -1,29 +1,19 @@
-# Kaggle Competition Entry: Bengali AI
+## Kaggle Competition Entry
+# Bengali.AI Handwritten Grapheme Classification
+
+Classify the components of handwritten Bengali
 
 https://www.kaggle.com/c/bengaliai-cv19
-
-> Bengali is the 5th most spoken language in the world with hundreds of million of speakers. It’s the official
-> language of Bangladesh and the second most spoken language in India. Considering its reach, there’s significant
-> business and educational interest in developing AI that can optically recognize images of the language handwritten
-> . This challenge hopes to improve on approaches to Bengali recognition.
->
-> Optical character recognition is particularly challenging for Bengali. While Bengali has 49 letters (to be more
-> specific 11 vowels and 38 consonants) in its alphabet, there are also 18 potential diacritics, or accents. This
-> means that there are many more graphemes, or the smallest units in a written language. The added complexity results
-> in ~13,000 different grapheme variations (compared to English’s 250 graphemic units).
->
-> For this competition, you’re given the image of a handwritten Bengali grapheme and are challenged to separately
-> classify three constituent elements in the image: grapheme root, vowel diacritics, and consonant diacritics.
 
 ## Leaderboard
 
 | Position       | Score   |  Prize       |
-|----------------|:-------:|-------------:|
+|:---------------|:-------:|-------------:|
 | 1st Place      |  0.9762 | $5000        |  
 | 2nd Place      |  0.9689 | $2000        |  
 | 3rd Place      |  0.9645 | $1000        |  
 | Top 14         |  0.9491 | Gold Medal   |  
-| 44/2059 - [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) | [0.9396](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537) | Late Submission | 
+| **Top 3%  (44/2059)** [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) | **[0.9396](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537)** | Late Submission | 
 | Top 5%  (102)  |  0.9348 | Silver Medal |  
 | Top 10% (205)  |  0.9306 | Bronze Medal |  
 
@@ -38,15 +28,28 @@ unzip ./input/bengaliai-cv19.zip -d ./input/bengaliai-cv19/
 time ./src/preprocessing/write_images_to_filesystem.py        # optional
 ```
 
+> Bengali is the 5th most spoken language in the world with hundreds of million of speakers. It’s the official
+> language of Bangladesh and the second most spoken language in India. Considering its reach, there’s significant
+> business and educational interest in developing AI that can optically recognize images of the language handwritten
+> . This challenge hopes to improve on approaches to Bengali recognition.
+>
+> Optical character recognition is particularly challenging for Bengali. While Bengali has 49 letters (to be more
+> specific 11 vowels and 38 consonants) in its alphabet, there are also 18 potential diacritics, or accents. This
+> means that there are many more graphemes, or the smallest units in a written language. The added complexity results
+> in ~13,000 different grapheme variations (compared to English’s 250 graphemic units).
+>
+> For this competition, you’re given the image of a handwritten Bengali grapheme and are challenged to separately
+> classify three constituent elements in the image: grapheme root, vowel diacritics, and consonant diacritics.
+>
 > This dataset contains images of individual hand-written [Bengali characters](https://en.wikipedia.org/wiki
-/Bengali_alphabet). Bengali characters (graphemes) are written by combining three components: a grapheme_root
-, vowel_diacritic, and consonant_diacritic. Your challenge is to classify the components of the grapheme in each
-image. There are roughly 10,000 possible graphemes, of which roughly 1,000 are represented in the training set. The
-test set includes some graphemes that do not exist in train but has no new grapheme components. It takes a lot of
-volunteers filling out [sheets like this](https://github.com/BengaliAI/graphemePrepare/blob/master/collection/A4/form_1.jpg)
-to generate a useful amount of real data; focusing the problem on the grapheme components rather than on recognizing
-whole graphemes should make it possible to assemble a Bengali OCR system without handwriting samples for all 10,000
-graphemes.
+> /Bengali_alphabet). Bengali characters (graphemes) are written by combining three components: a grapheme_root
+> , vowel_diacritic, and consonant_diacritic. Your challenge is to classify the components of the grapheme in each
+> image. There are roughly 10,000 possible graphemes, of which roughly 1,000 are represented in the training set. The
+> test set includes some graphemes that do not exist in train but has no new grapheme components. It takes a lot of
+> volunteers filling out [sheets like this](https://github.com/BengaliAI/graphemePrepare/blob/master/collection/A4/form_1.jpg)
+> to generate a useful amount of real data; focusing the problem on the grapheme components rather than on recognizing
+> whole graphemes should make it possible to assemble a Bengali OCR system without handwriting samples for all 10,000
+> graphemes.
 
 The parquet training dataset consists of 200,840 grayscale images (in 4 files) at 137x236 resolution with a total
  filesize of 4.8GB of data.
@@ -55,13 +58,13 @@ The parquet training dataset consists of 200,840 grayscale images (in 4 files) a
 ## Notebooks
 
 ### Technical Research
-- [Jupyter Environment Variable os.environ](notebooks/Jupyter Environment Variable os.environ.ipynb)
-- [Reading Parquet Files RAM CPU Optimization](notebooks/Reading Parquet Files RAM CPU Optimization.ipynb)
-- [Image Processing](notebooks/Image Processing.ipynb)
+- [Jupyter Environment Variable os.environ](notebooks/Jupyter%20Environment%20Variable%20os.environ.ipynb)
+- [Reading Parquet Files RAM CPU Optimization](notebooks/Reading%20Parquet%20Files%20RAM%20CPU%20Optimization.ipynb)
+- [Image Processing](notebooks/Image%20Processing.ipynb)
 
 ### Exploratory Data Analysis 
-- [EDA Grapheme Combinations](notebooks/EDA Grapheme Combinations.ipynb) 
-- [Unicode Visualization of the Bengali Alphabet](notebooks/Unicode Visualization of the Bengali Alphabet.ipynb)
+- [EDA Grapheme Combinations](notebooks/EDA%20Grapheme%20Combinations.ipynb)%20
+- [Unicode Visualization of the Bengali Alphabet](notebooks/Unicode%20Visualization%20of%20the%20Bengali%20Alphabet.ipynb)
 
 The Exploratory Data Analysis showed that only certain combinations of vowel/consonant diacritics where regularly
  combined with certain grapheme roots. 
@@ -142,7 +145,7 @@ os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Localhost')  # == 'Localhost' | 'Inter
 ```
 
 This was explored in the following notebook:
-- [Jupyter Environment Variable os.environ](notebooks/Jupyter Environment Variable os.environ.ipynb)
+- [Jupyter Environment Variable os.environ](notebooks/Jupyter%20Environment%20Variable%20os.environ.ipynb)
 
 The main uses for this are in the [settings.py](src/settings.py) file to specify different environment filesystem paths 
 (eg `./input/bengaliai-cv19/` vs `../input/bengaliai-cv19/`) as well as different default timeout and verbosity
@@ -178,7 +181,7 @@ that the 16GB of RAM available is insufficient to both load the entire training 
 tensorflow model.
 
 This prompted a full investigation into memory profiling and the different methods to read parquet files: 
-- [Reading Parquet Files RAM CPU Optimization](notebooks/Reading Parquet Files RAM CPU Optimization.ipynb)
+- [Reading Parquet Files RAM CPU Optimization](notebooks/Reading%20Parquet%20Files%20RAM%20CPU%20Optimization.ipynb)
  
 The dataformat of the parquet files means they cannot be read row-by-row, but only in their entirety. 
  
