@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-19 15:30:56+00:00
+##### 2020-03-23 00:47:04+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 5bdf259 [ahead 2] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
+##### * master 199a81c [ahead 1] hparams | remove tf.keras.backend.set_floatx('float16') | Causes: InvalidArgumentError: Nan in summary histogram for: conv2d/kernel_0 [Op:WriteHistogramSummary] name: conv2d/kernel_0/
 ##### 
-##### 5bdf2593967f27c8e6cec7b37a1a81d0c8ca53e1
+##### 199a81cac8e4ababfed70bbe0f1d930a165c1632
 ##### 
 
 #####
@@ -33,6 +33,7 @@ settings['hparam_defaults'] = {
     "split":         0.2,
     "batch_size":    128,
     "fraction":      1.0,
+    "epochs":         99,
 
     "patience": {
         'Localhost':    10,
@@ -90,7 +91,9 @@ else:
 
 ####################
 if __name__ == '__main__':
-    for dirname in settings['dir'].values(): os.makedirs(dirname, exist_ok=True)
+    for dirname in settings['dir'].values():
+        try:    os.makedirs(dirname, exist_ok=True)  # BUGFIX: read-only filesystem
+        except: pass
     for key,value in settings.items():       print(f"settings['{key}']:".ljust(30), str(value))
 
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
@@ -107,16 +110,17 @@ if __name__ == '__main__':
 ##### START src/dataset/Transforms.py
 #####
 
-import gc
 import math
-from typing import AnyStr, Dict, Union, List
+from typing import AnyStr, Dict, List, Union
 
+import gc
 import numpy as np
 import pandas as pd
 import skimage.measure
 from pandas import DataFrame, Series
 
 # from src.settings import settings
+
 
 
 class Transforms():
@@ -191,7 +195,7 @@ class Transforms():
 
         train = train.reshape(*train.shape, 1)        # 4D ndarray for tensorflow CNN
 
-        gc.collect(); # sleep(1)
+        gc.collect()  # ; sleep(1)
         return train
 
 
@@ -1008,7 +1012,7 @@ def argparse_from_dict(config: Dict, inplace=False):
 #####
 
 import os
-import re
+from itertools import chain
 
 import gc
 import numpy as np
@@ -1029,7 +1033,7 @@ def submission_df(model, output_shape):
     submission = pd.DataFrame(columns=output_shape.keys())
     # large datasets on submit, so loop
     for data_id in range(0,4):
-        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = { "normalize": True } )
+        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = {} )  # "normalize": True is default
         test_dataset_rows = test_dataset.X['train'].shape[0]
         batch_size        = 64
         for index in range(0, test_dataset_rows, batch_size):
@@ -1065,14 +1069,14 @@ def submission_df_generator(model, output_shape):
     cache_index = 0
     for cache in ParquetImageDataGenerator.cache_generator(
             globpath,
-            reads_per_file = 3,
+            reads_per_file = 2,
             resamples      = 1,
             shuffle        = False,
             infinite       = False,
     ):
         try:
             cache_index      += 1
-            batch_size        = 64
+            batch_size        = 128
             test_dataset_rows = cache.shape[0]
             print(f'submission_df_generator() - submission: ', cache_index, submission.shape)
             if test_dataset_rows == 0: continue
@@ -1080,7 +1084,7 @@ def submission_df_generator(model, output_shape):
                 try:
                     batch = cache[index : index+batch_size]
                     if batch.shape[0] == 0: continue
-                    X           = Transforms.transform_X(batch, normalize=True)
+                    X           = Transforms.transform_X(batch)  # normalize=True is default
                     predictions = model.predict_on_batch(X)
                     submission  = submission.append(
                         pd.DataFrame({
@@ -1115,30 +1119,48 @@ def submission_df_generator(model, output_shape):
 #     return submission
 
 
+# def df_to_submission(df: DataFrame) -> DataFrame:
+#     print('df_to_submission_columns() - input', df.shape)
+#     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
+#     submissions = {}
+#     for output_field in output_fields:
+#         if 'image_id' in df.columns:
+#             submissions[output_field] = DataFrame({
+#                 'row_id': df['image_id'] + '_' + output_field,
+#                 'target': df[output_field],
+#             })
+#         else:
+#             submissions[output_field] = DataFrame({
+#                 'row_id': df.index + '_' + output_field,
+#                 'target': df[output_field],
+#             })
+#
+#     # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
+#     submission = DataFrame(pd.concat(submissions.values()))
+#     submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
+#     submission = submission.sort_values(by=['sort','row_id'])
+#     submission = submission.drop(columns=['sort'])
+#
+#     print('df_to_submission_columns() - output', submission.shape)
+#     return submission
+
+
 def df_to_submission(df: DataFrame) -> DataFrame:
     print('df_to_submission_columns() - input', df.shape)
     output_fields = ['consonant_diacritic', 'grapheme_root', 'vowel_diacritic']
-    submissions = {}
-    for output_field in output_fields:
-        if 'image_id' in df.columns:
-            submissions[output_field] = DataFrame({
-                'row_id': df['image_id'] + '_' + output_field,
-                'target': df[output_field],
-            })
-        else:
-            submissions[output_field] = DataFrame({
-                'row_id': df.index + '_' + output_field,
-                'target': df[output_field],
-            })
+    if 'image_id' not in df.columns:
+        df['image_id'] = df.index
 
-    # Kaggle - Order of submission.csv IDs matters - https://www.kaggle.com/c/human-protein-atlas-image-classification/discussion/69366
-    submission = DataFrame(pd.concat(submissions.values()))
-    submission['sort'] = submission['row_id'].apply(lambda row_id: int(re.sub(r'\D', '', row_id)) )
-    submission = submission.sort_values(by=['sort','row_id'])
-    submission = submission.drop(columns=['sort'])
+    submission_rows = df.apply(lambda row: [{
+        'row_id': row['image_id'] + '_' + output_field,
+        'target': row[output_field],
+    } for output_field in output_fields], axis=1, result_type='reduce' )
+
+    submission = DataFrame(chain(*submission_rows.values))   # Hopefully in original sort order
 
     print('df_to_submission_columns() - output', submission.shape)
     return submission
+
 
 
 def df_to_submission_csv(df: DataFrame, filename: str):
@@ -1164,13 +1186,12 @@ import math
 import os
 import re
 import time
-from typing import Dict, AnyStr, Union
+from typing import AnyStr, Dict, Union
 
 import tensorflow as tf
 from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.backend import categorical_crossentropy
-from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler, EarlyStopping, \
-    ModelCheckpoint
+from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
 
 # from src.callbacks.KaggleTimeoutCallback import KaggleTimeoutCallback
 # from src.dataset.DatasetDF import DatasetDF
@@ -1178,9 +1199,12 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau, LearningRateScheduler,
 # from src.util.logs import model_stats_from_history
 # from src.vendor.CLR.clr_callback import CyclicLR
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+# tf.keras.backend.set_floatx('float16')  # Potentially causes problems with Tensortflow
+
 
 def hparam_key(hparams):
-    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
+    return "-".join( f"{key}={value}" for key,value in sorted(hparams.items()) ).replace(' ','')
 
 
 def min_lr(hparams):
@@ -1312,7 +1336,7 @@ def model_compile(
     hparams   = { **settings['hparam_defaults'], **hparams }
     optimiser = getattr(tf.keras.optimizers, hparams['optimizer'])
     loss      = losses(output_shape)
-    weights   = loss_weights(output_shape)
+    weights   = loss_weights(output_shape) if hparams.get('loss_weights') else None
 
     model.compile(
         loss=loss,
@@ -1353,6 +1377,7 @@ def model_compile_fit(
     model_stats = model_stats_from_history(history, timer_seconds, best_only)
     return model_stats
 
+
 #####
 ##### END   src/util/hparam.py
 #####
@@ -1372,7 +1397,7 @@ import glob2
 # from src.settings import settings
 # from src.util.argparse import argparse_from_dicts
 # from src.util.csv import df_to_submission_csv, submission_df
-# from src.util.hparam import model_compile_fit, hparam_key
+# from src.util.hparam import hparam_key, model_compile_fit
 # from src.util.logs import log_model_stats
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
@@ -1449,6 +1474,7 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
                 log_dir      = log_dir,
                 best_only    = True,
                 verbose      = 2,
+                epochs       = train_hparams.get('epochs',99),
             )
             if stats is None: break  # KaggleTimeoutCallback() triggered on_train_begin()
             model_stats.append(stats)
@@ -1490,6 +1516,8 @@ if __name__ == '__main__':
         "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
         "loops":         3,
+        "epochs":        99,
+        "loss_weights":  False,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
         train_hparams['patience'] = 0
@@ -1521,12 +1549,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-19 15:30:56+00:00
+##### 2020-03-23 00:47:04+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 5bdf259 [ahead 2] kaggle_compile.py | ./data_output/scripts/image_data_generator_NASNetMobile.py
+##### * master 199a81c [ahead 1] hparams | remove tf.keras.backend.set_floatx('float16') | Causes: InvalidArgumentError: Nan in summary histogram for: conv2d/kernel_0 [Op:WriteHistogramSummary] name: conv2d/kernel_0/
 ##### 
-##### 5bdf2593967f27c8e6cec7b37a1a81d0c8ca53e1
+##### 199a81cac8e4ababfed70bbe0f1d930a165c1632
 ##### 
