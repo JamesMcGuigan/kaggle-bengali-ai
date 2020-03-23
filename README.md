@@ -21,6 +21,9 @@ https://www.kaggle.com/c/bengaliai-cv19
 
 
 ## Dataset
+The parquet training dataset consists of 200,840 grayscale images (in 4 files) at 137x236 resolution with a total
+ filesize of 4.8GB of data.
+
 ```
 ./requirements.sh                                             # create ./venv/
 
@@ -53,8 +56,6 @@ time ./src/preprocessing/write_images_to_filesystem.py        # optional
 > whole graphemes should make it possible to assemble a Bengali OCR system without handwriting samples for all 10,000
 > graphemes.
 
-The parquet training dataset consists of 200,840 grayscale images (in 4 files) at 137x236 resolution with a total
- filesize of 4.8GB of data.
       
 
 ## Notebooks
@@ -271,7 +272,7 @@ The following transforms where conducted as preprocessing:
 This provided a clean and standarized format for both training and test data.
 
 An exploration and testing of Image Preprocessing was conducted in Jupyter Notebook
-- [Image Processing](notebooks/Image Processing.ipynb)
+- [Image Processing](notebooks/Image%20Processing.ipynb)
 
 The final code for image transforms
 - [src/dataset/Transforms.py](src/dataset/Transforms.py)
