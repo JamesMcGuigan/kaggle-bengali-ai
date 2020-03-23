@@ -8,7 +8,7 @@ from src.dataset.DatasetDF import DatasetDF
 from src.models.MultiOutputCNN import MultiOutputCNN
 from src.settings import settings
 from src.util.argparse import argparse_from_dicts
-from src.util.csv import df_to_submission_csv, submission_df
+from src.util.csv import df_to_submission_csv, submission_df_generator
 from src.util.hparam import hparam_key, model_compile_fit
 from src.util.logs import log_model_stats
 
@@ -142,13 +142,13 @@ if __name__ == '__main__':
     pipeline_name     = "multi_output_df_cnn"
     model_hparams_key = hparam_key(model_hparams)
     train_hparams_key = hparam_key(train_hparams)
-    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
-    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
+    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}/{model_hparams_key}-submission.log"
+    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}/{model_hparams_key}-submission.csv"
 
     model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
 
     log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
 
-    submission = submission_df(model, output_shape)
+    submission = submission_df_generator(model, output_shape)
     df_to_submission_csv( submission, csv_filename )
 
