@@ -46,12 +46,13 @@ time ./src/preprocessing/write_images_to_filesystem.py        # optional
 > For this competition, you’re given the image of a handwritten Bengali grapheme and are challenged to separately
 > classify three constituent elements in the image: grapheme root, vowel diacritics, and consonant diacritics.
 >
-> This dataset contains images of individual hand-written [Bengali characters](https://en.wikipedia.org/wiki
-> /Bengali_alphabet). Bengali characters (graphemes) are written by combining three components: a grapheme_root
-> , vowel_diacritic, and consonant_diacritic. Your challenge is to classify the components of the grapheme in each
-> image. There are roughly 10,000 possible graphemes, of which roughly 1,000 are represented in the training set. The
-> test set includes some graphemes that do not exist in train but has no new grapheme components. It takes a lot of
-> volunteers filling out [sheets like this](https://github.com/BengaliAI/graphemePrepare/blob/master/collection/A4/form_1.jpg)
+> This dataset contains images of individual hand-written 
+> [Bengali characters](https://en.wikipedia.org/wiki/Bengali_alphabet). Bengali characters (graphemes) are written by
+> combining three components: a grapheme_root, vowel_diacritic, and consonant_diacritic. Your challenge is to classify 
+> the components of the grapheme in each image. There are roughly 10,000 possible graphemes, of which roughly 1,000
+> are represented in the training set. The test set includes some graphemes that do not exist in train but has no
+> new grapheme components. It takes a lot of volunteers filling out 
+> [sheets like this](https://github.com/BengaliAI/graphemePrepare/blob/master/collection/A4/form_1.jpg)
 > to generate a useful amount of real data; focusing the problem on the grapheme components rather than on recognizing
 > whole graphemes should make it possible to assemble a Bengali OCR system without handwriting samples for all 10,000
 > graphemes.
