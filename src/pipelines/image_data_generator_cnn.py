@@ -18,6 +18,7 @@ from src.util.logs import log_model_stats
 
 
 def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, model_file=None, log_dir=None, verbose=2):
+    train_hparams = { **settings['hparam_defaults'], **train_hparams }
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)

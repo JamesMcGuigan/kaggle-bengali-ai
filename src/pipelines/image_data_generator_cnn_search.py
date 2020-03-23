@@ -4,8 +4,11 @@ import atexit
 import os
 import shutil
 
+import tensorflow as tf
+
 from src.pipelines.image_data_generator_cnn import image_data_generator_cnn
 from src.settings import settings
+from src.util.argparse import argparse_from_dict
 from src.util.hparam import hparam_key
 from src.util.hparam_search import hparam_combninations, hparam_logdir, hparam_run_name
 from src.util.logs import log_model_stats
@@ -25,8 +28,12 @@ def onexit(outputs: list):
 
 
 def image_data_generator_cnn_search(
-        debug=False,
+        debug=0,
+        verbose=0,
 ):
+    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
+    tf.keras.backend.set_floatx('float32')    # BUGFIX: Nan in summary histogram
+
     model_hparam_options = {
         "cnns_per_maxpool":   3,
         "maxpool_layers":     4,
@@ -55,18 +62,24 @@ def image_data_generator_cnn_search(
         # "optimizer":     "RMSprop",
         # "scheduler":     "constant",
         # "learning_rate": 0.001,
-        "best_only":     True,
-        "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
-        "patience":      10,
-        "epochs":        99,
-        "loss_weights":  False,
-        "timeout":       "6h"
+        # "best_only":     True,
+        # "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
+        # "patience":      10,
+        # "epochs":        99,
+        # "loss_weights":  False,
+        # "timeout":       "6h"
     }
-    pipeline_name       = "image_data_generator_cnn_search"
     model_combninations = hparam_combninations(model_hparam_options)
     train_combninations = hparam_combninations(train_hparams_search)
     combninations_count = len(model_combninations)*len(train_combninations)
     stats_history   = []
+
+    if   len(train_combninations) >= 2 and len(model_combninations) == 1:
+        pipeline_name = "image_data_generator_cnn_search_train"
+    elif len(train_combninations) == 1 and len(model_combninations) >= 2:
+        pipeline_name = "image_data_generator_cnn_search_model"
+    else:
+        pipeline_name = "image_data_generator_cnn_search_train_model"
 
 
     print(f"--- Testing {combninations_count} combinations")
@@ -82,6 +95,7 @@ def image_data_generator_cnn_search(
             print("")
             print(f"--- Starting trial {index}/{combninations_count}: {logdir.split('/')[-2]} | {run_name}")
             print(model_hparams)
+            print(train_hparams)
 
             model_hparams_key = hparam_key(model_hparams)
             train_hparams_key = hparam_key(train_hparams)
@@ -89,6 +103,9 @@ def image_data_generator_cnn_search(
             csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}/{model_hparams_key}-{train_hparams_key}-submission.csv"
             model_file        = f"{settings['dir']['models']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}/{model_hparams_key}-{train_hparams_key}.hdf5"
             log_dir           = f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
+
+            for dirname in [ log_dir ] + list(map(os.path.dirname, [logfilename, csv_filename, model_file])):
+                os.makedirs(dirname, exist_ok=True)
 
             if os.path.exists(model_file):
                 print('Exists: skipping')
@@ -102,7 +119,7 @@ def image_data_generator_cnn_search(
                 pipeline_name = pipeline_name,
                 model_file    = model_file,
                 log_dir       = log_dir,
-                verbose       = 0,
+                verbose       = verbose,
             )
 
             log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
@@ -121,4 +138,5 @@ def image_data_generator_cnn_search(
     return stats_history
 
 if __name__ == '__main__':
-    image_data_generator_cnn_search(debug=False)
+    argv = argparse_from_dict({ "debug": 0, "verbose": 0 })
+    image_data_generator_cnn_search(**argv)

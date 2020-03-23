@@ -14,6 +14,7 @@ settings['hparam_defaults'] = {
     "split":         0.2,
     "batch_size":    128,
     "fraction":      1.0,
+    "epochs":         99,
 
     "patience": {
         'Localhost':    10,
