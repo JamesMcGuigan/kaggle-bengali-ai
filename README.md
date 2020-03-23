@@ -5,7 +5,7 @@ Classify the components of handwritten Bengali
 
 https://www.kaggle.com/c/bengaliai-cv19
 
-<img style='float:right' width=300 src="https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1095143%2Fa9a48686e3f385d9456b59bf2035594c%2Fdesc.png?generation=1576531903599785&alt=media"/>
+<img alt='Recognize the constituents given a handwritten grapheme image' style='float:right' width=300 src="https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1095143%2Fa9a48686e3f385d9456b59bf2035594c%2Fdesc.png?generation=1576531903599785&alt=media"/>
 
 ## Leaderboard
 
@@ -61,13 +61,21 @@ time ./src/preprocessing/write_images_to_filesystem.py        # optional
 ## Notebooks
 
 ### Technical Research
-- [Jupyter Environment Variable os.environ](notebooks/Jupyter%20Environment%20Variable%20os.environ.ipynb)
 - [Reading Parquet Files RAM CPU Optimization](notebooks/Reading%20Parquet%20Files%20RAM%20CPU%20Optimization.ipynb)
+[[Kaggle Version](https://www.kaggle.com/jamesmcguigan/reading-parquet-files-ram-cpu-optimization)]
+- [Jupyter Environment Variable os.environ](notebooks/Jupyter%20Environment%20Variable%20os.environ.ipynb) 
+[[Kaggle Version](https://www.kaggle.com/jamesmcguigan/jupyter-environment-variable-os-environ)]
+
+### Image Preprocessing
 - [Image Processing](notebooks/Image%20Processing.ipynb)
+[[Kaggle Version](https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing)]
+- Dataset as Image Directory [[Kaggle Version](https://www.kaggle.com/jamesmcguigan/bengali-ai-dataset-as-image-directory)]
 
 ### Exploratory Data Analysis 
-- [EDA Grapheme Combinations](notebooks/EDA%20Grapheme%20Combinations.ipynb)%20
+- [EDA Grapheme Combinations](notebooks/EDA%20Grapheme%20Combinations.ipynb)
+[[Kaggle Version](https://www.kaggle.com/jamesmcguigan/bengali-ai-dataset-eda-grapheme-combinations)]
 - [Unicode Visualization of the Bengali Alphabet](notebooks/Unicode%20Visualization%20of%20the%20Bengali%20Alphabet.ipynb)
+[[Kaggle Version](https://www.kaggle.com/jamesmcguigan/unicode-visualization-of-the-bengali-alphabet)]
 
 The Exploratory Data Analysis showed that only certain combinations of vowel/consonant diacritics where regularly
  combined with certain grapheme roots. 
