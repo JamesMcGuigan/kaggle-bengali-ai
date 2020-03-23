@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-23 00:47:04+00:00
+##### 2020-03-23 16:43:28+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 199a81c [ahead 1] hparams | remove tf.keras.backend.set_floatx('float16') | Causes: InvalidArgumentError: Nan in summary histogram for: conv2d/kernel_0 [Op:WriteHistogramSummary] name: conv2d/kernel_0/
+##### * master f1a8e1b [ahead 1] multi_output_df_cnn | use submission_df_generator()
 ##### 
-##### 199a81cac8e4ababfed70bbe0f1d930a165c1632
+##### f1a8e1b772f54ea1d5fff35ef48f030fb5d6863a
 ##### 
 
 #####
@@ -1396,7 +1396,7 @@ import glob2
 # from src.models.MultiOutputCNN import MultiOutputCNN
 # from src.settings import settings
 # from src.util.argparse import argparse_from_dicts
-# from src.util.csv import df_to_submission_csv, submission_df
+# from src.util.csv import df_to_submission_csv, submission_df_generator
 # from src.util.hparam import hparam_key, model_compile_fit
 # from src.util.logs import log_model_stats
 
@@ -1513,7 +1513,7 @@ if __name__ == '__main__':
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
-        "fraction":      0.5,   # Reduce memory overhead, but do 4 loops
+        "fraction":      1,   # Reduce memory overhead, but do 4 loops
         "patience":      10,
         "loops":         3,
         "epochs":        99,
@@ -1530,14 +1530,14 @@ if __name__ == '__main__':
     pipeline_name     = "multi_output_df_cnn"
     model_hparams_key = hparam_key(model_hparams)
     train_hparams_key = hparam_key(train_hparams)
-    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
-    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
+    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}/{model_hparams_key}-submission.log"
+    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}/{model_hparams_key}-submission.csv"
 
     model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
 
     log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
 
-    submission = submission_df(model, output_shape)
+    submission = submission_df_generator(model, output_shape)
     df_to_submission_csv( submission, csv_filename )
 
 
@@ -1549,12 +1549,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-23 00:47:04+00:00
+##### 2020-03-23 16:43:28+00:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 199a81c [ahead 1] hparams | remove tf.keras.backend.set_floatx('float16') | Causes: InvalidArgumentError: Nan in summary histogram for: conv2d/kernel_0 [Op:WriteHistogramSummary] name: conv2d/kernel_0/
+##### * master f1a8e1b [ahead 1] multi_output_df_cnn | use submission_df_generator()
 ##### 
-##### 199a81cac8e4ababfed70bbe0f1d930a165c1632
+##### f1a8e1b772f54ea1d5fff35ef48f030fb5d6863a
 ##### 
