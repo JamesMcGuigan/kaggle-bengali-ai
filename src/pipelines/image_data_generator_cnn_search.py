@@ -3,6 +3,7 @@
 import atexit
 import os
 import shutil
+import sys
 
 import tensorflow as tf
 
@@ -50,18 +51,19 @@ def image_data_generator_cnn_search(
         # "global_maxpool":     [False], # [True,False],
     }
     train_hparams_search = {
-        "optimized_scheduler": {
-            "Adagrad_triangular": { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "triangular"  },
-            "Adagrad_plateau":    { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "plateau2"    },
-            "Adam_triangular2":   { "learning_rate": 0.01,   "optimizer": "Adam",     "scheduler": "triangular2" },
-            "Nadam_plateau":      { "learning_rate": 0.01,   "optimizer": "Nadam",    "scheduler": "plateau10"   },
-            "Adadelta_plateau":   { "learning_rate": 1.0,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
-            "SGD_triangular2":    { "learning_rate": 1.0,    "optimizer": "SGD",      "scheduler": "triangular2" },
-            "RMSprop_constant":   { "learning_rate": 0.001,  "optimizer": "RMSprop",  "scheduler": "constant"    },
-        },
-        # "optimizer":     "RMSprop",
-        # "scheduler":     "constant",
-        # "learning_rate": 0.001,
+        # "optimized_scheduler": {
+        #     "Adagrad_triangular": { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "triangular"  },
+        #     "Adagrad_plateau":    { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "plateau2"    },
+        #     "Adam_triangular2":   { "learning_rate": 0.01,   "optimizer": "Adam",     "scheduler": "triangular2" },
+        #     "Nadam_plateau":      { "learning_rate": 0.01,   "optimizer": "Nadam",    "scheduler": "plateau10"   },
+        #     # "Adadelta_plateau":   { "learning_rate": 1.0,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
+        #     "Adadelta_plateau":   { "learning_rate": 0.1,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
+        #     "SGD_triangular2":    { "learning_rate": 1.0,    "optimizer": "SGD",      "scheduler": "triangular2" },
+        #     "RMSprop_constant":   { "learning_rate": 0.001,  "optimizer": "RMSprop",  "scheduler": "constant"    },
+        # },
+        "optimizer":     [ "RMSprop", "Adagrad", "Adam", "Nadam", "Adadelta" ],
+        "scheduler":     "constant",
+        "learning_rate": [ 0.001, 0.01 ],
         # "best_only":     True,
         # "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         # "patience":      10,
@@ -111,24 +113,30 @@ def image_data_generator_cnn_search(
                 print('Exists: skipping')
                 continue
             if debug: continue
-            atexit.register(onexit, [logfilename, csv_filename, model_file, log_dir])
 
-            model, model_stats, output_shape = image_data_generator_cnn(
-                train_hparams = train_hparams,
-                model_hparams = model_hparams,
-                pipeline_name = pipeline_name,
-                model_file    = model_file,
-                log_dir       = log_dir,
-                verbose       = verbose,
-            )
+            try:
+                model, model_stats, output_shape = image_data_generator_cnn(
+                    train_hparams = train_hparams,
+                    model_hparams = model_hparams,
+                    pipeline_name = pipeline_name,
+                    model_file    = model_file,
+                    log_dir       = log_dir,
+                    verbose       = verbose,
+                )
 
-            log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
-            # submission = submission_df_generator(model, output_shape)
-            # df_to_submission_csv( submission, csv_filename )
-            stats_history += model_stats
-            print(model_stats)
+                log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
+                # submission = submission_df_generator(model, output_shape)
+                # df_to_submission_csv( submission, csv_filename )
+                stats_history += model_stats
+                print(model_stats)
 
-            atexit.unregister(onexit)
+                atexit.unregister(onexit)
+
+            except KeyboardInterrupt:
+                onexit([logfilename, csv_filename, model_file, log_dir])
+                sys.exit()
+            except:
+                onexit([logfilename, csv_filename, model_file, log_dir])
 
     print("")
     print("--- Stats History")
