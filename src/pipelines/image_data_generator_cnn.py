@@ -17,7 +17,15 @@ from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_fr
 from src.util.logs import log_model_stats
 
 
-def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, model_file=None, log_dir=None, verbose=2):
+def image_data_generator_cnn(
+        train_hparams,
+        model_hparams,
+        pipeline_name,
+        model_file=None,
+        log_dir=None,
+        verbose=2,
+        load_weights=True
+):
     train_hparams = { **settings['hparam_defaults'], **train_hparams }
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
@@ -45,21 +53,22 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name, model_
     model_compile(model_hparams, model, output_shape)
 
     # Load Pre-existing weights
-    if os.path.exists( model_file ):
-        try:
-            model.load_weights( model_file )
-            print('Loaded Weights: ', model_file)
-        except Exception as exception: print('exception', exception)
-
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        load_models = (glob2.glob(f'../input/**/{os.path.basename(model_file)}')
-                    +  glob2.glob(f'../input/**/{os.path.basename(model_file)}'.replace('=','')))  # Kaggle Dataset Upload removes '='
-        for load_model in load_models:
+    if load_weights:
+        if os.path.exists( model_file ):
             try:
-                model.load_weights( load_model )
-                print('Loaded Weights: ', load_model)
-                # break
+                model.load_weights( model_file )
+                print('Loaded Weights: ', model_file)
             except Exception as exception: print('exception', exception)
+
+        if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+            load_models = (glob2.glob(f'../input/**/{os.path.basename(model_file)}')
+                        +  glob2.glob(f'../input/**/{os.path.basename(model_file)}'.replace('=','')))  # Kaggle Dataset Upload removes '='
+            for load_model in load_models:
+                try:
+                    model.load_weights( load_model )
+                    print('Loaded Weights: ', load_model)
+                    # break
+                except Exception as exception: print('exception', exception)
 
     if verbose:
         model.summary()

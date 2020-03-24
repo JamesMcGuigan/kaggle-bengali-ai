@@ -63,7 +63,7 @@ def image_data_generator_cnn_search(
         # },
         "optimizer":     [ "RMSprop", "Adagrad", "Adam", "Nadam", "Adadelta" ],
         "scheduler":     "constant",
-        "learning_rate": [ 0.001, 0.01 ],
+        "learning_rate": [ 0.001, 0.01, 0.1 ],
         # "best_only":     True,
         # "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         # "patience":      10,
@@ -122,6 +122,7 @@ def image_data_generator_cnn_search(
                     model_file    = model_file,
                     log_dir       = log_dir,
                     verbose       = verbose,
+                    load_weights  = False,
                 )
 
                 log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
