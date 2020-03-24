@@ -432,3 +432,30 @@ The first application investigated was NASNetMobile, however compared to the cus
 TODO:
 - Test the full range of `tf.keras.applications`
 - Test if running for a fixed number of epochs produces more consistent results
+
+
+## Hyperparameter Search
+
+Previous research on MINST produced the following shortlist of Optimizer / Learning Rate / Scheduler combinations 
+```
+"optimized_scheduler": {
+    "Adagrad_triangular": { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "CyclicLR_triangular"  },
+    "Adagrad_plateau":    { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "plateau2"      },
+    "Adam_triangular2":   { "learning_rate": 0.01,   "optimizer": "Adam",     "scheduler": "CyclicLR_triangular2" },
+    "Nadam_plateau":      { "learning_rate": 0.01,   "optimizer": "Nadam",    "scheduler": "plateau_sqrt"  },
+    "Adadelta_plateau":   { "learning_rate": 1.0,    "optimizer": "Adadelta", "scheduler": "plateau10"     },
+    "SGD_triangular2":    { "learning_rate": 1.0,    "optimizer": "SGD",      "scheduler": "CyclicLR_triangular2" },
+    "RMSprop_constant":   { "learning_rate": 0.001,  "optimizer": "RMSprop",  "scheduler": "constant"      },
+}
+```
+- https://github.com/JamesMcGuigan/kaggle-digit-recognizer
+
+### Optimizers and Learning Rates
+- [src/pipelines/image_data_generator_cnn_search.py](src/pipelines/image_data_generator_cnn_search.py)
+- [data_output/submissions/image_data_generator_cnn_search_train/results.csv](data_output/submissions/image_data_generator_cnn_search_train/results.csv)
+
+| Time | Epocs | Loss  | Optimizer | Scheduler | Learning Rate | Notes                    |
+|-----:|------:|:------|----------:|----------:|:--------------|--------------------------|
+| 9558 | 68	   | 0.759 | Adam      | constant  | 0.001         | Lowest loss but slowest  | 
+| 4514 | 32	   | 0.818 | RMSProp   | constant  | 0.001         | Fastest with decent loss | 
+
