@@ -91,7 +91,10 @@ def losses(output_shape):
     if   isinstance(output_shape, list): losses = [ categorical_crossentropy      for n   in output_shape        ]
     elif isinstance(output_shape, dict): losses = { key: categorical_crossentropy for key in output_shape.keys() }
     else:                                losses = categorical_crossentropy
-    return losses
+
+    # BUGFIX: tensorflow:sample_weight modes were coerced from {} -> []
+    if isinstance(losses, dict): return losses.values()
+    else:                        return losses
 
 
 def loss_weights(output_shape):
