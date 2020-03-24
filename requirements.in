@@ -16,8 +16,8 @@ scikit-image
 
 ### Tensoflow
 tensorboard
-tensorflow==2.2.0-rc1      # v2.1.0 works with CUDA 10.1 | v2.0.0 works with CUDA 10.0 | https://www.tensorflow.org/install/source#tested_build_configurations
-tensorflow-gpu==2.2.0-rc1  # tensorflow==2.1.0 emits depreciation warnings without numpy<1.17
+tensorflow==2.1.0          # v2.1.0 works with CUDA 10.1 | v2.0.0 works with CUDA 10.0 | https://www.tensorflow.org/install/source#tested_build_configurations
+tensorflow-gpu==2.1.0      # tensorflow==2.1.0 emits depreciation warnings without numpy<1.17
 # tensorflow-addons        # https://github.com/tensorflow/addons - broken in OSX
 numba
 
