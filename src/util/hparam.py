@@ -106,7 +106,7 @@ def loss_weights(output_shape):
         key: math.sqrt(value)/norm
         for key,value in output_shape.items()
     }
-    return weights
+    return weights.values()  # BUGFIX: tensorflow:sample_weight modes were coerced from {} -> []
 
 
 
