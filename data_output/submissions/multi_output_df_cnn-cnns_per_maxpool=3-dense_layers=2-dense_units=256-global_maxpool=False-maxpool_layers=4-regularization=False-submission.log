@@ -1,0 +1,20 @@
+------------------------------
+Completed
+------------------------------
+model_hparams: {'cnns_per_maxpool': 3, 'maxpool_layers': 4, 'dense_layers': 2, 'dense_units': 256, 'regularization': False, 'global_maxpool': False}
+train_hparams: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 0.5, 'epochs': 1, 'patience': 10, 'loops': 1, 'timeout': '24h', 'loss_weights': False}
+------------------------------
+settings[hparam_defaults]: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'epochs': 99, 'patience': 10, 'loops': 1, 'timeout': '24h'}
+settings[verbose]: {'tensorboard': True, 'fit': 1}
+settings[dir]: {'data': './input/bengaliai-cv19', 'features': './input_features/bengaliai-cv19/', 'models': './data_output/models', 'submissions': './data_output/submissions', 'logs': './logs'}
+------------------------------
+{'loss': 1.5320800101465022, 'grapheme_root_loss': 0.42899236, 'vowel_diacritic_loss': 0.12898397, 'consonant_diacritic_loss': 0.1168632, 'grapheme_loss': 0.8571287, 'grapheme_root_accuracy': 0.90026885, 'vowel_diacritic_accuracy': 0.9698267, 'consonant_diacritic_accuracy': 0.9713702, 'grapheme_accuracy': 0.84684324, 'val_loss': 1.041513109356729, 'val_grapheme_root_loss': 0.27854592, 'val_vowel_diacritic_loss': 0.11413966, 'val_consonant_diacritic_loss': 0.28739682, 'val_grapheme_loss': 0.3506155, 'val_grapheme_root_accuracy': 0.94682336, 'val_vowel_diacritic_accuracy': 0.9832703, 'val_consonant_diacritic_accuracy': 0.97849035, 'val_grapheme_accuracy': 0.92451704, 'lr': 0.001, 'time': 40, 'epochs': 1}
+{'loss': 1.447897163954087, 'grapheme_root_loss': 0.391206, 'vowel_diacritic_loss': 0.12709956, 'consonant_diacritic_loss': 0.11882493, 'grapheme_loss': 0.810632, 'grapheme_root_accuracy': 0.90360487, 'vowel_diacritic_accuracy': 0.9699263, 'consonant_diacritic_accuracy': 0.9693786, 'grapheme_accuracy': 0.8522705, 'val_loss': 0.804289400043347, 'val_grapheme_root_loss': 0.22771013, 'val_vowel_diacritic_loss': 0.08028471, 'val_consonant_diacritic_loss': 0.13674983, 'val_grapheme_loss': 0.34961537, 'val_grapheme_root_accuracy': 0.94224256, 'val_vowel_diacritic_accuracy': 0.98386776, 'val_consonant_diacritic_accuracy': 0.9796853, 'val_grapheme_accuracy': 0.9207329, 'lr': 0.001, 'time': 36, 'epochs': 1}
+{'loss': 1.4216661767236884, 'grapheme_root_loss': 0.38876203, 'vowel_diacritic_loss': 0.1188236, 'consonant_diacritic_loss': 0.11489926, 'grapheme_loss': 0.79890275, 'grapheme_root_accuracy': 0.90644294, 'vowel_diacritic_accuracy': 0.9710715, 'consonant_diacritic_accuracy': 0.96863174, 'grapheme_accuracy': 0.85794663, 'val_loss': 0.7262844605361339, 'val_grapheme_root_loss': 0.2309932, 'val_vowel_diacritic_loss': 0.07904217, 'val_consonant_diacritic_loss': 0.07050868, 'val_grapheme_loss': 0.34667966, 'val_grapheme_root_accuracy': 0.94562835, 'val_vowel_diacritic_accuracy': 0.9832703, 'val_consonant_diacritic_accuracy': 0.9814778, 'val_grapheme_accuracy': 0.9267078, 'lr': 0.001, 'time': 36, 'epochs': 1}
+{'loss': 1.5058576771282766, 'grapheme_root_loss': 0.41819033, 'vowel_diacritic_loss': 0.13413827, 'consonant_diacritic_loss': 0.11260977, 'grapheme_loss': 0.8408385, 'grapheme_root_accuracy': 0.89912367, 'vowel_diacritic_accuracy': 0.9694284, 'consonant_diacritic_accuracy': 0.970723, 'grapheme_accuracy': 0.8459968, 'val_loss': 16.4538063132129, 'val_grapheme_root_loss': 3.459725, 'val_vowel_diacritic_loss': 2.413313, 'val_consonant_diacritic_loss': 8.047438, 'val_grapheme_loss': 2.2503614, 'val_grapheme_root_accuracy': 0.93268275, 'val_vowel_diacritic_accuracy': 0.9822745, 'val_consonant_diacritic_accuracy': 0.97669786, 'val_grapheme_accuracy': 0.91734713, 'lr': 0.001, 'time': 38, 'epochs': 1}
+------------------------------
+------------------------------
+script started: 2020-03-23 16:39:27
+script ended:   2020-03-23 16:43:57
+script runtime: 4 minutess
+------------------------------
