@@ -7,17 +7,11 @@ https://www.kaggle.com/c/bengaliai-cv19
 
 <img alt='Recognize the constituents given a handwritten grapheme image' style='float:right' width=300 src="https://www.googleapis.com/download/storage/v1/b/kaggle-user-content/o/inbox%2F1095143%2Fa9a48686e3f385d9456b59bf2035594c%2Fdesc.png?generation=1576531903599785&alt=media"/>
 
-## Leaderboard
+## Scores
 
-| Position       | Score   |  Prize       |
-|:---------------|:-------:|-------------:|
-| 1st Place      |  0.9762 | $5000        |  
-| 2nd Place      |  0.9689 | $2000        |  
-| 3rd Place      |  0.9645 | $1000        |  
-| Top 14         |  0.9491 | Gold Medal   |  
-| **Top 3%  (44/2059)** [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) | **[0.9396](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537)** | Late Submission | 
-| Top 5%  (102)  |  0.9348 | Silver Medal |  
-| Top 10% (205)  |  0.9306 | Bronze Medal |  
+| Score  | Entry  |
+|:-------|:-------|
+| 0.9396 | [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537 |
 
 
 ## Dataset
@@ -60,6 +54,9 @@ time ./src/preprocessing/write_images_to_filesystem.py        # optional
       
 
 ## Notebooks
+
+### Previous Competitions
+- [Kaggle Competition Entry - MNIST Digit Recognizer](https://github.com/JamesMcGuigan/kaggle-digit-recognizer)
 
 ### Technical Research
 - [Reading Parquet Files RAM CPU Optimization](notebooks/Reading%20Parquet%20Files%20RAM%20CPU%20Optimization.ipynb)
