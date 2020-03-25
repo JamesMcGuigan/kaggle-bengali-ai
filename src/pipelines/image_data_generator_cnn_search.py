@@ -17,7 +17,6 @@ from src.util.logs import log_model_stats
 
 # remove logs and models for incomplete trainings
 def onexit(outputs: list):
-    print('Ctrl-C KeyboardInterrupt')
     for output in outputs:
         if os.path.exists(output):
             if os.path.isdir(output):
@@ -36,34 +35,37 @@ def image_data_generator_cnn_search(
     tf.keras.backend.set_floatx('float32')    # BUGFIX: Nan in summary histogram
 
     model_hparam_options = {
-        "cnns_per_maxpool":   3,
-        "maxpool_layers":     4,
-        "dense_layers":       2,
-        "dense_units":      256,
-        "regularization": False,
-        "global_maxpool": False,
+        # "cnns_per_maxpool":   3,
+        # "maxpool_layers":     4,
+        # "dense_layers":       2,
+        # "dense_units":      256,
+        # "regularization": False,
+        # "global_maxpool": False,
 
-        # "cnns_per_maxpool":   [2,3,4],
-        # "maxpool_layers":     [4,5],
-        # "dense_layers":       [1,2,3],
-        # "dense_units":        [256],
-        # "regularization":     [False], # [True,False],
-        # "global_maxpool":     [False], # [True,False],
+        "cnns_per_maxpool":   [1,2,3,4],
+        "maxpool_layers":     [4,5],
+        "dense_layers":       [1,2,3],
+        "dense_units":        [128,256,512],
+        "regularization":     [True,False],
+        "global_maxpool":     [True,False],
     }
     train_hparams_search = {
-        # "optimized_scheduler": {
-        #     "Adagrad_triangular": { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "triangular"  },
-        #     "Adagrad_plateau":    { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "plateau2"    },
-        #     "Adam_triangular2":   { "learning_rate": 0.01,   "optimizer": "Adam",     "scheduler": "triangular2" },
-        #     "Nadam_plateau":      { "learning_rate": 0.01,   "optimizer": "Nadam",    "scheduler": "plateau10"   },
-        #     # "Adadelta_plateau":   { "learning_rate": 1.0,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
-        #     "Adadelta_plateau":   { "learning_rate": 0.1,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
-        #     "SGD_triangular2":    { "learning_rate": 1.0,    "optimizer": "SGD",      "scheduler": "triangular2" },
-        #     "RMSprop_constant":   { "learning_rate": 0.001,  "optimizer": "RMSprop",  "scheduler": "constant"    },
-        # },
-        "optimizer":     [ "RMSprop", "Adagrad", "Adam", "Nadam", "Adadelta" ],
-        "scheduler":     "constant",
-        "learning_rate": [ 0.001, 0.01, 0.1 ],
+        "optimized_scheduler": {
+            "Adagrad_triangular":   { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "triangular"  },
+            "Adagrad_plateau":      { "learning_rate": 0.1,    "optimizer": "Adagrad",  "scheduler": "plateau2"    },
+            "Adam_triangular2":     { "learning_rate": 0.01,   "optimizer": "Adam",     "scheduler": "triangular2" },
+            "Nadam_plateau":        { "learning_rate": 0.01,   "optimizer": "Nadam",    "scheduler": "plateau10"   },
+            "Adadelta_plateau_1.0": { "learning_rate": 1.0,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
+            "Adadelta_plateau_0.1": { "learning_rate": 0.1,    "optimizer": "Adadelta", "scheduler": "plateau10"   },
+            "SGD_triangular2":      { "learning_rate": 1.0,    "optimizer": "SGD",      "scheduler": "triangular2" },
+            "RMSprop_constant":     { "learning_rate": 0.001,  "optimizer": "RMSprop",  "scheduler": "constant"    },
+        },
+        # "optimizer":     [ "RMSprop", "Adagrad", "Adam", "Nadam", "Adadelta" ],
+        # "scheduler":     "constant",
+        # "learning_rate": [ 0.001, 0.01 ],
+        # "optimizer":     "Adadelta",
+        # "scheduler":     "plateau10",
+        # "learning_rate": 1.0,
         # "best_only":     True,
         # "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
         # "patience":      10,
@@ -134,9 +136,11 @@ def image_data_generator_cnn_search(
                 atexit.unregister(onexit)
 
             except KeyboardInterrupt:
+                print('Ctrl-C KeyboardInterrupt')
                 onexit([logfilename, csv_filename, model_file, log_dir])
                 sys.exit()
-            except:
+            except Exception as exception:
+                print("Exception:", exception)
                 onexit([logfilename, csv_filename, model_file, log_dir])
 
     print("")

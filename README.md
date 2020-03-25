@@ -456,6 +456,7 @@ Previous research on MINST produced the following shortlist of Optimizer / Learn
 
 | Time | Epocs | Loss  | Optimizer | Scheduler | Learning Rate | Notes                    |
 |-----:|------:|:------|----------:|----------:|:--------------|--------------------------|
-| 9558 | 68	   | 0.759 | Adam      | constant  | 0.001         | Lowest loss but slowest  | 
-| 4514 | 32	   | 0.818 | RMSProp   | constant  | 0.001         | Fastest with decent loss | 
+| 7580 | 54	   | 0.637 | Adadelta  | plateau10 | 1.000         | Lowest loss, least epochs, middle speed | 
+| 9558 | 68	   | 0.759 | Adam      | constant  | 0.001         | Lowest loss with constant optimizer | 
+| 4514 | 32	   | 0.818 | RMSProp   | constant  | 0.001         | Fastest with decent loss            | 
 
