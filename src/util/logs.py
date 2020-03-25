@@ -1,3 +1,4 @@
+import os
 import time
 from datetime import datetime
 from typing import Dict, Union
@@ -22,6 +23,7 @@ def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union
 
 python_start = time.time()
 def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
+    os.makedirs(os.path.dirname(logfilename), exist_ok=True)
     with open(logfilename, 'w') as file:
         output = [
             "------------------------------",

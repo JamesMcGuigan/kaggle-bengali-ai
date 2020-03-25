@@ -153,6 +153,7 @@ def df_to_submission(df: DataFrame) -> DataFrame:
 def df_to_submission_csv(df: DataFrame, filename: str):
     submission = df_to_submission(df)
 
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
