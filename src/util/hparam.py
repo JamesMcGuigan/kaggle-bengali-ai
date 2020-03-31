@@ -118,12 +118,15 @@ def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, v
             monitor='val_loss',
             mode='min',
             verbose=verbose,
-            patience=hparams.get('patience', hparams['patience']),
+            patience=hparams.get('patience', 10),
             restore_best_weights=best_only
         ),
         schedule,
-        KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
     ]
+    if hparams.get("timeout"):
+        callbacks += [
+            KaggleTimeoutCallback( hparams.get("timeout"), verbose=False ),
+        ]
     if model_file:
         callbacks += [
             ModelCheckpoint(
