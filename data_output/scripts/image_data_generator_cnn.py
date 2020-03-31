@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-31 17:57:09+01:00
+##### 2020-03-31 18:06:42+01:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 710b328 [ahead 2] image_data_generator_cnn | set model_hparams to fastest good result from grid search
+##### * master b647190 [ahead 1] image_data_generator_cnn | Preserve test/train split for Kaggle
 ##### 
-##### 710b328cedfdb45b6b8bbc2a172a3d4445dad95c
+##### b647190f8cbd70b31f472ea258be821ec0b3401d
 ##### 
 
 #####
@@ -1522,9 +1522,10 @@ def image_data_generator_cnn(
         "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
         "test":  f"{settings['dir']['data']}/test_image_data_*.parquet",
     }
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
-        fileglobs["train"] = f"{settings['dir']['data']}/train_image_data_*.parquet"
+    ### Preserve test/train split for Kaggle
+    # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+    #     # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
+    #     fileglobs["train"] = f"{settings['dir']['data']}/train_image_data_*.parquet"
 
     generators = {
         key: datagens[key].flow_from_parquet(value, **flow_args[key])
@@ -1617,12 +1618,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-31 17:57:09+01:00
+##### 2020-03-31 18:06:42+01:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 710b328 [ahead 2] image_data_generator_cnn | set model_hparams to fastest good result from grid search
+##### * master b647190 [ahead 1] image_data_generator_cnn | Preserve test/train split for Kaggle
 ##### 
-##### 710b328cedfdb45b6b8bbc2a172a3d4445dad95c
+##### b647190f8cbd70b31f472ea258be821ec0b3401d
 ##### 
