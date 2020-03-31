@@ -26,7 +26,8 @@ def image_data_generator_cnn(
         verbose=2,
         load_weights=True
 ):
-    train_hparams = { **settings['hparam_defaults'], **train_hparams }
+    combined_hparams = { **model_hparams, **train_hparams }
+    train_hparams    = { **settings['hparam_defaults'], **train_hparams }
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
@@ -96,7 +97,7 @@ def image_data_generator_cnn(
         "transform_X_args": {},  #  "normalize": True is default in Transforms
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
-        "reads_per_file":   3,
+        "reads_per_file":   2,
         "resamples":        1,
         "shuffle":          True,
         "infinite":         True,
@@ -144,7 +145,7 @@ def image_data_generator_cnn(
     ### Epoch: train == one whole parquet files | valid = 1 filesystem read
     steps_per_epoch  = int(dataset_rows_per_file['train'] / flow_args['train']['batch_size'] * flow_args['train']['resamples'] )
     validation_steps = int(dataset_rows_per_file['valid'] / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'] )
-    callback         = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
+    callback         = callbacks(combined_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
     timer_start = time.time()
     history = model.fit(
