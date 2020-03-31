@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-23 16:43:28+00:00
+##### 2020-03-31 18:16:41+01:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master f1a8e1b [ahead 1] multi_output_df_cnn | use submission_df_generator()
+##### * master f0d1273 [ahead 3] multi_output_df_cnn | model_hparams = Fastest ImageDataGenerator CNN
 ##### 
-##### f1a8e1b772f54ea1d5fff35ef48f030fb5d6863a
+##### f0d1273b1ca3b899345796760abd962c6d6b8e16
 ##### 
 
 #####
@@ -540,6 +540,7 @@ if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 ##### START src/util/logs.py
 #####
 
+import os
 import time
 from datetime import datetime
 from typing import Dict, Union
@@ -564,6 +565,7 @@ def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union
 
 python_start = time.time()
 def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
+    os.makedirs(os.path.dirname(logfilename), exist_ok=True)
     with open(logfilename, 'w') as file:
         output = [
             "------------------------------",
@@ -1166,6 +1168,7 @@ def df_to_submission(df: DataFrame) -> DataFrame:
 def df_to_submission_csv(df: DataFrame, filename: str):
     submission = df_to_submission(df)
 
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
@@ -1199,6 +1202,8 @@ from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, Mod
 # from src.util.logs import model_stats_from_history
 # from src.vendor.CLR.clr_callback import CyclicLR
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 # tf.keras.backend.set_floatx('float16')  # Potentially causes problems with Tensortflow
 
@@ -1213,8 +1218,8 @@ def min_lr(hparams):
     # Lower min_lr values for CycleCR tend to train slower
     hparams = { **settings['hparam_defaults'], **hparams }
     if 'min_lr'  in hparams:              return hparams['min_lr']
-    if hparams["optimizer"] == "SGD":     return 1e05  # preferred by SGD
-    else:                                 return 1e03  # fastest, least overfitting and most accidental high-scores
+    if hparams["optimizer"] == "SGD":     return 1e-05  # preferred by SGD
+    else:                                 return 1e-03  # fastest, least overfitting and most accidental high-scores
 
 
 # DOCS: https://ruder.io/optimizing-gradient-descent/index.html
@@ -1302,12 +1307,15 @@ def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, v
             monitor='val_loss',
             mode='min',
             verbose=verbose,
-            patience=hparams.get('patience', hparams['patience']),
+            patience=hparams.get('patience', 10),
             restore_best_weights=best_only
         ),
         schedule,
-        KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
     ]
+    if hparams.get("timeout"):
+        callbacks += [
+            KaggleTimeoutCallback( hparams.get("timeout"), verbose=False ),
+        ]
     if model_file:
         callbacks += [
             ModelCheckpoint(
@@ -1400,6 +1408,8 @@ import glob2
 # from src.util.hparam import hparam_key, model_compile_fit
 # from src.util.logs import log_model_stats
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
@@ -1486,35 +1496,30 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
 
 
 if __name__ == '__main__':
-    # model_hparams = {
-    #     "cnns_per_maxpool": 2,
-    #     "maxpool_layers":   6,
-    #     "dense_layers":     4,
-    #     "dense_units":    128,
-    #     "fraction":       0.1,
-    # }
+    # Fastest ImageDataGenerator CNN with high score
+    # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
     model_hparams = {
         "cnns_per_maxpool":   3,
-        "maxpool_layers":     4,
-        "dense_layers":       2,
+        "maxpool_layers":     5,
+        "dense_layers":       1,
         "dense_units":      256,
         "regularization": False,
         "global_maxpool": False,
     }
     train_hparams = {
-        "optimizer":     "RMSprop",
-        "scheduler":     "constant",
-        "learning_rate": 0.001,
+        # "optimizer":     "RMSprop",
+        # "scheduler":     "constant",
+        # "learning_rate": 0.001,
 
-        # "optimizer": "Adagrad",
-        # "scheduler": "plateau2",
-        # "learning_rate": 1,
+        "optimizer":     "Adagrad",
+        "scheduler":     "plateau10",
+        "learning_rate": 1,
+        "patience":      20,
 
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
         "fraction":      1,   # Reduce memory overhead, but do 4 loops
-        "patience":      10,
         "loops":         3,
         "epochs":        99,
         "loss_weights":  False,
@@ -1549,12 +1554,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/multi_output_df_cnn.py --commit
 ##### 
-##### 2020-03-23 16:43:28+00:00
+##### 2020-03-31 18:16:41+01:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master f1a8e1b [ahead 1] multi_output_df_cnn | use submission_df_generator()
+##### * master f0d1273 [ahead 3] multi_output_df_cnn | model_hparams = Fastest ImageDataGenerator CNN
 ##### 
-##### f1a8e1b772f54ea1d5fff35ef48f030fb5d6863a
+##### f0d1273b1ca3b899345796760abd962c6d6b8e16
 ##### 
