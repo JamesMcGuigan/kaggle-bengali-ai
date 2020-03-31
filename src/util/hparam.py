@@ -15,6 +15,8 @@ from src.settings import settings
 from src.util.logs import model_stats_from_history
 from src.vendor.CLR.clr_callback import CyclicLR
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 # tf.keras.backend.set_floatx('float16')  # Potentially causes problems with Tensortflow
 
@@ -29,8 +31,8 @@ def min_lr(hparams):
     # Lower min_lr values for CycleCR tend to train slower
     hparams = { **settings['hparam_defaults'], **hparams }
     if 'min_lr'  in hparams:              return hparams['min_lr']
-    if hparams["optimizer"] == "SGD":     return 1e05  # preferred by SGD
-    else:                                 return 1e03  # fastest, least overfitting and most accidental high-scores
+    if hparams["optimizer"] == "SGD":     return 1e-05  # preferred by SGD
+    else:                                 return 1e-03  # fastest, least overfitting and most accidental high-scores
 
 
 # DOCS: https://ruder.io/optimizing-gradient-descent/index.html
