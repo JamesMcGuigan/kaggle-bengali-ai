@@ -17,6 +17,7 @@ from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_fr
 from src.util.logs import log_model_stats
 
 
+
 def image_data_generator_cnn(
         train_hparams,
         model_hparams,
@@ -166,21 +167,28 @@ def image_data_generator_cnn(
 
 
 if __name__ == '__main__':
+    # Fastest with high score
+    # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
+    #
+    # Shortlist:
+    # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=512 | global_maxpool=True  | regularization=False
+    # - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
+    # - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=True
     model_hparams = {
         "cnns_per_maxpool":   3,
-        "maxpool_layers":     4,
-        "dense_layers":       2,
+        "maxpool_layers":     5,
+        "dense_layers":       1,
         "dense_units":      256,
         "regularization": False,
         "global_maxpool": False,
     }
     train_hparams = {
-        "optimizer":     "RMSprop",
-        "scheduler":     "constant",
-        "learning_rate": 0.001,
+        "optimizer":     "Adadelta",
+        "scheduler":     "plateau10",
+        "learning_rate": 1,
+        "patience":      20,
         "best_only":     True,
         "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
-        "patience":      10,
         "epochs":        999,
         "loss_weights":  False,
     }
