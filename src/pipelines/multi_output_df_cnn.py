@@ -12,6 +12,8 @@ from src.util.csv import df_to_submission_csv, submission_df_generator
 from src.util.hparam import hparam_key, model_compile_fit
 from src.util.logs import log_model_stats
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
@@ -98,35 +100,30 @@ def multi_output_df_cnn(train_hparams, model_hparams, pipeline_name):
 
 
 if __name__ == '__main__':
-    # model_hparams = {
-    #     "cnns_per_maxpool": 2,
-    #     "maxpool_layers":   6,
-    #     "dense_layers":     4,
-    #     "dense_units":    128,
-    #     "fraction":       0.1,
-    # }
+    # Fastest ImageDataGenerator CNN with high score
+    # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
     model_hparams = {
         "cnns_per_maxpool":   3,
-        "maxpool_layers":     4,
-        "dense_layers":       2,
+        "maxpool_layers":     5,
+        "dense_layers":       1,
         "dense_units":      256,
         "regularization": False,
         "global_maxpool": False,
     }
     train_hparams = {
-        "optimizer":     "RMSprop",
-        "scheduler":     "constant",
-        "learning_rate": 0.001,
+        # "optimizer":     "RMSprop",
+        # "scheduler":     "constant",
+        # "learning_rate": 0.001,
 
-        # "optimizer": "Adagrad",
-        # "scheduler": "plateau2",
-        # "learning_rate": 1,
+        "optimizer":     "Adagrad",
+        "scheduler":     "plateau10",
+        "learning_rate": 1,
+        "patience":      20,
 
         # "min_lr":        0.001,
         # "split":         0.2,
         # "batch_size":    128,
         "fraction":      1,   # Reduce memory overhead, but do 4 loops
-        "patience":      10,
         "loops":         3,
         "epochs":        99,
         "loss_weights":  False,
