@@ -1,0 +1,39 @@
+------------------------------
+Completed
+------------------------------
+model_hparams: {'maxpool_layers': 5, 'cnns_per_maxpool': 2, 'dense_units': 512, 'dense_layers': 1, 'regularization': True, 'global_maxpool': False}
+train_hparams: {'optimizer': 'Adadelta', 'learning_rate': 1.0, 'scheduler': 'plateau10'}
+------------------------------
+settings[hparam_defaults]: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'epochs': 99, 'patience': 10, 'loops': 1, 'timeout': '24h'}
+settings[verbose]: {'tensorboard': True, 'fit': 1}
+settings[dir]: {'data': './input/bengaliai-cv19', 'features': './input_features/bengaliai-cv19/', 'models': './data_output/models', 'submissions': './data_output/submissions', 'logs': './logs'}
+------------------------------
+{
+    "loss": "0.8253430420453103",
+    "grapheme_root_loss": "0.18856855",
+    "vowel_diacritic_loss": "0.05994425",
+    "consonant_diacritic_loss": "0.05657031",
+    "grapheme_loss": "0.35416386",
+    "grapheme_root_accuracy": "0.9528166",
+    "vowel_diacritic_accuracy": "0.9855267",
+    "consonant_diacritic_accuracy": "0.9852264",
+    "grapheme_accuracy": "0.9408856",
+    "val_loss": "0.8327204597239591",
+    "val_grapheme_root_loss": "0.22735997",
+    "val_vowel_diacritic_loss": "0.077299416",
+    "val_consonant_diacritic_loss": "0.06439043",
+    "val_grapheme_loss": "0.29350582",
+    "val_grapheme_root_accuracy": "0.9527966",
+    "val_vowel_diacritic_accuracy": "0.9855467",
+    "val_consonant_diacritic_accuracy": "0.984786",
+    "val_grapheme_accuracy": "0.9404652",
+    "lr": "1.0000001e-06",
+    "time": "11473",
+    "epochs": "99"
+}
+------------------------------
+------------------------------
+script started: 2020-03-28 15:14:42
+script ended:   2020-03-28 22:17:34
+script runtime: 7 hourss
+------------------------------

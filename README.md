@@ -460,3 +460,31 @@ Previous research on MINST produced the following shortlist of Optimizer / Learn
 | 9558 | 68	   | 0.759 | Adam      | constant  | 0.001         | Lowest loss with constant optimizer | 
 | 4514 | 32	   | 0.818 | RMSProp   | constant  | 0.001         | Fastest with decent loss            | 
 
+### CNN Model Hparams
+- [src/pipelines/image_data_generator_cnn_search.py](src/pipelines/image_data_generator_cnn_search.py)
+- [data_output/submissions/image_data_generator_cnn_search_model/results.csv](data_output/submissions/image_data_generator_cnn_search_model/results.csv)
+
+A hyperparameter grid search was run varying the number of layers within the CNN model
+
+regularization
+- `regularization=False` almost always outperforms `regularization=True`
+- `regularization=True` prefers fewer dense units
+
+global_maxpool
+- `regularization=True` prefers `global_maxpool=False` (but not vice veras)
+- `global_maxpool=True` prefers double the number of `dense_units` and +1 `cnns_per_maxpool`
+
+cnns
+- increasing `maxpool_layers` prefers fewer `cnns_per_maxpool` (ideal total CNNs = 15 / 16) 
+
+dense units
+- `dense_layers=1` is preferred over `2` or `3`
+
+Fastest with high score 
+- maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False 
+
+Shortlist:
+- maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=512 | global_maxpool=True  | regularization=False
+- maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
+- maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=True
+
