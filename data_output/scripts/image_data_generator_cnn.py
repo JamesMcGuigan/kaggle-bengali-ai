@@ -3,14 +3,14 @@
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-22 15:43:51+00:00
+##### 2020-03-31 17:57:09+01:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 3486e96 [ahead 5] image_data_generator_cnn | load kaggle model_file | Kaggle Dataset Upload removes '='
+##### * master 710b328 [ahead 2] image_data_generator_cnn | set model_hparams to fastest good result from grid search
 ##### 
-##### 3486e962d8f4e8e9080fc10c5de2d864f3000fdd
+##### 710b328cedfdb45b6b8bbc2a172a3d4445dad95c
 ##### 
 
 #####
@@ -33,6 +33,7 @@ settings['hparam_defaults'] = {
     "split":         0.2,
     "batch_size":    128,
     "fraction":      1.0,
+    "epochs":         99,
 
     "patience": {
         'Localhost':    10,
@@ -539,6 +540,7 @@ if __name__ == '__main__' and not os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
 ##### START src/util/logs.py
 #####
 
+import os
 import time
 from datetime import datetime
 from typing import Dict, Union
@@ -563,6 +565,7 @@ def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union
 
 python_start = time.time()
 def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
+    os.makedirs(os.path.dirname(logfilename), exist_ok=True)
     with open(logfilename, 'w') as file:
         output = [
             "------------------------------",
@@ -1165,6 +1168,7 @@ def df_to_submission(df: DataFrame) -> DataFrame:
 def df_to_submission_csv(df: DataFrame, filename: str):
     submission = df_to_submission(df)
 
+    os.makedirs(os.path.dirname(filename), exist_ok=True)
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
         submission.to_csv('submission.csv', index=False)
         print("wrote:", 'submission.csv', submission.shape)
@@ -1198,12 +1202,14 @@ from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, Mod
 # from src.util.logs import model_stats_from_history
 # from src.vendor.CLR.clr_callback import CyclicLR
 
+
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
-tf.keras.backend.set_floatx('float16')    # Set tensorflow to use float16 as default
+# tf.keras.backend.set_floatx('float16')  # Potentially causes problems with Tensortflow
 
 
 def hparam_key(hparams):
-    return "-".join( f"{key}={value}" for key,value in hparams.items() ).replace(' ','')
+    return "-".join( f"{key}={value}" for key,value in sorted(hparams.items()) ).replace(' ','')
 
 
 def min_lr(hparams):
@@ -1212,8 +1218,8 @@ def min_lr(hparams):
     # Lower min_lr values for CycleCR tend to train slower
     hparams = { **settings['hparam_defaults'], **hparams }
     if 'min_lr'  in hparams:              return hparams['min_lr']
-    if hparams["optimizer"] == "SGD":     return 1e05  # preferred by SGD
-    else:                                 return 1e03  # fastest, least overfitting and most accidental high-scores
+    if hparams["optimizer"] == "SGD":     return 1e-05  # preferred by SGD
+    else:                                 return 1e-03  # fastest, least overfitting and most accidental high-scores
 
 
 # DOCS: https://ruder.io/optimizing-gradient-descent/index.html
@@ -1301,12 +1307,15 @@ def callbacks(hparams, dataset, model_file=None, log_dir=None, best_only=True, v
             monitor='val_loss',
             mode='min',
             verbose=verbose,
-            patience=hparams.get('patience', hparams['patience']),
+            patience=hparams.get('patience', 10),
             restore_best_weights=best_only
         ),
         schedule,
-        KaggleTimeoutCallback( hparams["timeout"], verbose=False ),
     ]
+    if hparams.get("timeout"):
+        callbacks += [
+            KaggleTimeoutCallback( hparams.get("timeout"), verbose=False ),
+        ]
     if model_file:
         callbacks += [
             ModelCheckpoint(
@@ -1404,7 +1413,18 @@ from pyarrow.parquet import ParquetFile
 # from src.util.logs import log_model_stats
 
 
-def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
+
+def image_data_generator_cnn(
+        train_hparams,
+        model_hparams,
+        pipeline_name,
+        model_file=None,
+        log_dir=None,
+        verbose=2,
+        load_weights=True
+):
+    combined_hparams = { **model_hparams, **train_hparams }
+    train_hparams    = { **settings['hparam_defaults'], **train_hparams }
     print("pipeline_name", pipeline_name)
     print("train_hparams", train_hparams)
     print("model_hparams", model_hparams)
@@ -1413,8 +1433,8 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     train_hparams_key = hparam_key(train_hparams)
 
     # csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
-    model_file  = f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
-    log_dir     = f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
+    model_file  = model_file or f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
+    log_dir     = log_dir    or f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
 
     os.makedirs(os.path.dirname(model_file), exist_ok=True)
     os.makedirs(log_dir,                     exist_ok=True)
@@ -1431,24 +1451,25 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     model_compile(model_hparams, model, output_shape)
 
     # Load Pre-existing weights
-    if os.path.exists( model_file ):
-        try:
-            model.load_weights( model_file )
-            print('Loaded Weights: ', model_file)
-        except Exception as exception: print('exception', exception)
-
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        load_models = (glob2.glob(f'../input/**/{os.path.basename(model_file)}')
-                    +  glob2.glob(f'../input/**/{os.path.basename(model_file)}'.replace('=','')))  # Kaggle Dataset Upload removes '='
-        for load_model in load_models:
+    if load_weights:
+        if os.path.exists( model_file ):
             try:
-                model.load_weights( load_model )
-                print('Loaded Weights: ', load_model)
-                # break
+                model.load_weights( model_file )
+                print('Loaded Weights: ', model_file)
             except Exception as exception: print('exception', exception)
 
-    model.summary()
+        if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+            load_models = (glob2.glob(f'../input/**/{os.path.basename(model_file)}')
+                        +  glob2.glob(f'../input/**/{os.path.basename(model_file)}'.replace('=','')))  # Kaggle Dataset Upload removes '='
+            for load_model in load_models:
+                try:
+                    model.load_weights( load_model )
+                    print('Loaded Weights: ', load_model)
+                    # break
+                except Exception as exception: print('exception', exception)
 
+    if verbose:
+        model.summary()
 
     # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
     datagen_args = {
@@ -1473,7 +1494,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         "transform_X_args": {},  #  "normalize": True is default in Transforms
         "transform_Y":      Transforms.transform_Y,
         "batch_size":       train_hparams['batch_size'],
-        "reads_per_file":   3,
+        "reads_per_file":   2,
         "resamples":        1,
         "shuffle":          True,
         "infinite":         True,
@@ -1521,7 +1542,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
     ### Epoch: train == one whole parquet files | valid = 1 filesystem read
     steps_per_epoch  = int(dataset_rows_per_file['train'] / flow_args['train']['batch_size'] * flow_args['train']['resamples'] )
     validation_steps = int(dataset_rows_per_file['valid'] / flow_args['valid']['batch_size'] / flow_args['train']['reads_per_file'] )
-    callback         = callbacks(train_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
+    callback         = callbacks(combined_hparams, dataset, model_file, log_dir, best_only=True, verbose=1)
 
     timer_start = time.time()
     history = model.fit(
@@ -1530,7 +1551,7 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
         epochs           = train_hparams['epochs'],
         steps_per_epoch  = steps_per_epoch,
         validation_steps = validation_steps,
-        verbose          = 2,
+        verbose          = verbose,
         callbacks        = callback
     )
     timer_seconds = int(time.time() - timer_start)
@@ -1542,21 +1563,28 @@ def image_data_generator_cnn(train_hparams, model_hparams, pipeline_name):
 
 
 if __name__ == '__main__':
+    # Fastest with high score
+    # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
+    #
+    # Shortlist:
+    # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=512 | global_maxpool=True  | regularization=False
+    # - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
+    # - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=True
     model_hparams = {
         "cnns_per_maxpool":   3,
-        "maxpool_layers":     4,
-        "dense_layers":       2,
+        "maxpool_layers":     5,
+        "dense_layers":       1,
         "dense_units":      256,
         "regularization": False,
         "global_maxpool": False,
     }
     train_hparams = {
-        "optimizer":     "RMSprop",
-        "scheduler":     "constant",
-        "learning_rate": 0.001,
+        "optimizer":     "Adadelta",
+        "scheduler":     "plateau10",
+        "learning_rate": 1,
+        "patience":      20,
         "best_only":     True,
         "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
-        "patience":      10,
         "epochs":        999,
         "loss_weights":  False,
     }
@@ -1589,12 +1617,12 @@ if __name__ == '__main__':
 ##### 
 ##### ./kaggle_compile.py src/pipelines/image_data_generator_cnn.py --commit
 ##### 
-##### 2020-03-22 15:43:51+00:00
+##### 2020-03-31 17:57:09+01:00
 ##### 
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (fetch)
 ##### origin	git@github.com:JamesMcGuigan/kaggle-bengali-ai.git (push)
 ##### 
-##### * master 3486e96 [ahead 5] image_data_generator_cnn | load kaggle model_file | Kaggle Dataset Upload removes '='
+##### * master 710b328 [ahead 2] image_data_generator_cnn | set model_hparams to fastest good result from grid search
 ##### 
-##### 3486e962d8f4e8e9080fc10c5de2d864f3000fdd
+##### 710b328cedfdb45b6b8bbc2a172a3d4445dad95c
 ##### 
