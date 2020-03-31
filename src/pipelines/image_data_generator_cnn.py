@@ -126,9 +126,10 @@ def image_data_generator_cnn(
         "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
         "test":  f"{settings['dir']['data']}/test_image_data_*.parquet",
     }
-    if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
-        # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
-        fileglobs["train"] = f"{settings['dir']['data']}/train_image_data_*.parquet"
+    ### Preserve test/train split for Kaggle
+    # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
+    #     # For the Kaggle Submission, train on all available data and rely on Kaggle Timeout
+    #     fileglobs["train"] = f"{settings['dir']['data']}/train_image_data_*.parquet"
 
     generators = {
         key: datagens[key].flow_from_parquet(value, **flow_args[key])
