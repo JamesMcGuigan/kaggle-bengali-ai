@@ -29,7 +29,8 @@ def image_data_generator_cnn(
         model_file     = None,
         log_dir        = None,
         verbose        = 2,
-        load_weights   = True
+        load_weights   = True,
+        fileglobs      = {}
 ):
     combined_hparams = { **model_hparams, **train_hparams, **transform_X_args, **transform_Y_args, **datagen_args }
     train_hparams    = { **settings['hparam_defaults'], **train_hparams }
@@ -126,6 +127,7 @@ def image_data_generator_cnn(
         "train": f"{settings['dir']['data']}/train_image_data_[123].parquet",
         "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
         "test":  f"{settings['dir']['data']}/test_image_data_*.parquet",
+        **fileglobs
     }
     ### Preserve test/train split for Kaggle
     # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE'):
