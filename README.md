@@ -9,9 +9,24 @@ https://www.kaggle.com/c/bengaliai-cv19
 
 ## Scores
 
-| Score  | Entry  |
-|:-------|:-------|
-| 0.9396 | [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537 |
+| Position              | Private | Public |  Prize       | Notes |
+|:----------------------|:-------:|:------:|-------------:|-------|
+| 1st Place             |  0.9762 | 0.9952 | $5000        |       |
+| 2nd Place             |  0.9689 | 0.9955 | $2000        |       |
+| 3rd Place             |  0.9645 | 0.9945 | $1000        |       |
+| Top 14                |  0.9491 | 0.9913 | Gold Medal   |       |
+| Top 5%  (102)         |  0.9348 | 0.9858 | Silver Medal |       |
+| Top 10% (205)         |  0.9306 | 0.9791 | Bronze Medal |       |
+| [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=31218596) |  0.9010 | 0.9413 | | 4\*4 CNN + 1\*256 Dense |
+| [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=31203616) |  0.8961 | 0.9482 | | 3\*5 CNN + 1\*256 Dense + Y+=grapheme |
+| [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537) |  0.8921 | 0.9396 | | 3\*4 CNN + 2\*256 Dense + Y+=grapheme |
+| [Multi Output DF CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-multi-output-df-cnn?scriptVersionId=31204140)         |  0.8901 | 0.9402 | | 3\*5 CNN + 1\*256 Dense + Y+=grapheme - no augmentation |
+| [Multi Output DF CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-multi-output-df-cnn?scriptVersionId=30830488)         |  0.8828 | 0.9337 | | 3\*4 CNN + 2\*256 Dense + Y+=grapheme - no augmentation |
+| [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=31262979) |  0.8797 | 0.9198 | | 4\*4 CNN + 1\*256 Dense + Y+=grapheme + Regularization  |
+| sample_submission.csv |  0.0614 | 0.0614 | Random Score |       |
+
+
+| **Top 3%  (44/2059)** [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) | **[0.9396](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537)** | Late Submission |
 
 
 ## Dataset
@@ -487,4 +502,15 @@ Shortlist:
 - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=512 | global_maxpool=True  | regularization=False
 - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
 - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=True
+
+
+Results:
+- Optimizing architecture from `3\*4 CNN + 2\*256 Dense` -> `3\*5 CNN + 1\*256 Dense` improves kaggle score `0.8921/0.9396` -> `0.8961/0.9482`
+- Adding regularization reduces score from `0.8961/0.9482` -> `0.8797/0.9198`
+- Removing `Y+=grapheme` improves private score from `0.8961/0.9482` -> `0.9010/0.9413`
+
+TODO:
+- Train Y on unicode grapheme components
+- Hyperparameter search on X_transforms + Augmentation params
+- Kaggle trained models still timeout, so pretrained models might produce better results  
 
