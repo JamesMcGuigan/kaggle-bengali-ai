@@ -5,6 +5,7 @@ import itertools
 import os
 import random
 import shutil
+import subprocess
 import sys
 import traceback
 from collections import ChainMap
@@ -54,13 +55,13 @@ def image_data_generator_cnn_search(
         # "optimizer":     [ "RMSprop", "Adagrad", "Adam", "Nadam", "Adadelta" ],
         # "scheduler":     "constant",
         # "learning_rate": [ 0.001, 0.01 ],
-        "optimizer":     "Adadelta",
+        "optimizer":     "Nadam",
         "scheduler":     "plateau10",
-        "learning_rate": 1.0,
+        "learning_rate": 0.01,
         # "best_only":     True,
-        # "batch_size":    128,     # Too small and the GPU is waiting on the CPU - too big and GPU runs out of RAM - keep it small for kaggle
+        "batch_size":    [16, 32, 64, 128, 256, 512],  # IO bound | GPU max memory = 512 | 128 seems optimal
         # "patience":      10,
-        "epochs":        1,
+        "epochs":        5,
         # "loss_weights":  False,
         # "timeout":       "6h"
     }
@@ -87,11 +88,11 @@ def image_data_generator_cnn_search(
     }
     search['transform_X'] = {
         "resize":       2,
-        "invert":    True,
+        # "invert":    True,
         "rescale":   True,
         "denoise":   True,
         "center":    True,
-        "normalize": True,
+        # "normalize": True,
     }
     search['transform_Y'] = {
     }
@@ -122,7 +123,8 @@ def image_data_generator_cnn_search(
     stats_history = []
 
     pipeline_name  = "image_data_generator_cnn_search_train_model"
-    pipeline_name += "_" + "_".join(sorted([ key for key,values in combninations_search.items() if len(values) >= 2 ]))
+    pipeline_name += "_batch"
+    # pipeline_name += "_" + "_".join(sorted([ key for key,values in combninations_search.items() if len(values) >= 2 ]))
 
     print(f"--- Testing {len(combninations)} combinations")
     for key, value in search.items(): print(f"--- search: {key}", value)
@@ -132,7 +134,7 @@ def image_data_generator_cnn_search(
         index += 1
 
         hparams_searched = dict(ChainMap(*[
-            { key: hparams[key] for key, values in sorted(options.items()) if isinstance(values, (list,dict)) }
+            { key: hparams[name][key] for key, values in sorted(options.items()) if isinstance(values, (list,dict)) }
             for name, options in search.items()
         ]))
         hparams_key = hparam_key(hparams_searched)
@@ -159,6 +161,7 @@ def image_data_generator_cnn_search(
         if debug: continue
 
         try:
+            tf.keras.backend.clear_session()
             model, model_stats, output_shape = image_data_generator_cnn(
                 train_hparams    = hparams['train'],
                 model_hparams    = hparams['model'],
@@ -170,6 +173,11 @@ def image_data_generator_cnn_search(
                 log_dir          = log_dir,
                 verbose          = verbose,
                 load_weights     = False,
+                # fileglobs = {
+                #     "train": f"{settings['dir']['data']}/train_image_data_1.parquet",
+                #     "valid": f"{settings['dir']['data']}/train_image_data_0.parquet",
+                #     "test":  f"{settings['dir']['data']}/test_image_data_*.parquet",
+                # }
             )
 
             log_model_stats(model_stats, logfilename, hparams)
@@ -179,6 +187,7 @@ def image_data_generator_cnn_search(
             print(model_stats)
 
             atexit.unregister(onexit)
+            subprocess.run(['./logfiles_to_csv.sh', os.path.dirname(logfilename)], stdout=subprocess.DEVNULL, shell=False)
 
         except KeyboardInterrupt:
             print('Ctrl-C KeyboardInterrupt')

@@ -1,0 +1,6 @@
+time,epochs,val_loss,val_grapheme_root_accuracy,val_vowel_diacritic_accuracy,val_consonant_diacritic_accuracy,file
+741,5,1.8133788875171117,0.84573805,0.9503143,0.95271647,./data_output/submissions/image_data_generator_cnn_search_train_model_batch/batch_size=128-submission.log,batch_size=128,submission.log
+738,5,2.784540587542008,0.7589038,0.94031954,0.92277354,./data_output/submissions/image_data_generator_cnn_search_train_model_batch/batch_size=256-submission.log,batch_size=256,submission.log
+776,5,3.1391742308529054,0.85387963,0.9479254,0.95028156,./data_output/submissions/image_data_generator_cnn_search_train_model_batch/batch_size=64-submission.log,batch_size=64,submission.log
+815,5,5.470076737659318,0.7938819,0.9536154,0.9420891,./data_output/submissions/image_data_generator_cnn_search_train_model_batch/batch_size=32-submission.log,batch_size=32,submission.log
+739,5,9.516378811427526,0.30569676,0.55422276,0.82007074,./data_output/submissions/image_data_generator_cnn_search_train_model_batch/batch_size=512-submission.log,batch_size=512,submission.log
