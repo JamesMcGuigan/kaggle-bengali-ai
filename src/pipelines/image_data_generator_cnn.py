@@ -178,10 +178,15 @@ if __name__ == '__main__':
     model_hparams = {
         "cnns_per_maxpool":   3,
         "maxpool_layers":     5,
+        "cnn_units":         32,
+        "cnn_kernel":         3,
+        "cnn_strides":        1,
         "dense_layers":       1,
         "dense_units":      256,
-        "regularization": False,
-        "global_maxpool": False,
+        "regularization": False,  # Produces worse results
+        "global_maxpool": False,  #
+        "activation":    'relu',  # 'relu' | 'crelu' | 'leaky_relu' | 'relu6' | 'softmax' | 'tanh' | 'hard_sigmoid' | 'sigmoid'
+        "dropout":         0.25,
     }
     train_hparams = {
         "optimizer":     "Adadelta",

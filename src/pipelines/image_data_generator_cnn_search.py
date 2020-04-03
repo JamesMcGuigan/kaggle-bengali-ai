@@ -16,6 +16,7 @@ from src.util.hparam_search import hparam_combninations, hparam_logdir, hparam_r
 from src.util.logs import log_model_stats
 
 
+
 # remove logs and models for incomplete trainings
 def onexit(outputs: list):
     for output in outputs:
@@ -36,19 +37,25 @@ def image_data_generator_cnn_search(
     tf.keras.backend.set_floatx('float32')    # BUGFIX: Nan in summary histogram
 
     model_hparam_options = {
-        # "cnns_per_maxpool":   3,
-        # "maxpool_layers":     4,
-        # "dense_layers":       2,
-        # "dense_units":      256,
-        # "regularization": False,
-        # "global_maxpool": False,
+        ### Searched
+        # "cnns_per_maxpool":   [1,2,3,4],
+        # "maxpool_layers":     [4,5],
+        # "dense_layers":       [1,2,3],
+        # "dense_units":        [128,256,512],
+        # "regularization":     [True,False],
+        # "global_maxpool":     [True,False],
 
-        "cnns_per_maxpool":   [1,2,3,4],
-        "maxpool_layers":     [4,5],
-        "dense_layers":       [1,2,3],
-        "dense_units":        [128,256,512],
-        "regularization":     [True,False],
-        "global_maxpool":     [True,False],
+        "cnns_per_maxpool":   3,
+        "maxpool_layers":     5,  # increasing `maxpool_layers` prefers fewer `cnns_per_maxpool` (ideal total CNNs = 15 / 16)
+        "cnn_units":         32,
+        "cnn_kernel":         3,
+        "cnn_strides":        1,
+        "dense_layers":       1,  # `dense_layers=1` is preferred over `2` or `3`
+        "dense_units":      256,
+        "regularization": False,  # `regularization=True` prefers `global_maxpool=False` (but not vice versa) - worse results
+        "global_maxpool": False,  # `global_maxpool=True` prefers double the number of `dense_units` and +1 `cnns_per_maxpool`
+        "activation":    'relu',  # 'relu' | 'crelu' | 'leaky_relu' | 'relu6' | 'softmax' | 'tanh' | 'hard_sigmoid' | 'sigmoid'
+        "dropout":         0.25,
     }
     train_hparams_search = {
         # "optimized_scheduler": {
