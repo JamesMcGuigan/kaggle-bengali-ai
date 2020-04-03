@@ -48,7 +48,7 @@ def log_model_stats(model_stats, logfilename, nested_hparams: Dict[str, Dict]):
             f"------------------------------",
             f"script started: { datetime.datetime.fromtimestamp( python_start ).strftime('%Y-%m-%d %H:%M:%S')}",
             f"script ended:   { datetime.datetime.fromtimestamp( time.time()  ).strftime('%Y-%m-%d %H:%M:%S')}",
-            f"script runtime: { str(datetime.timedelta(seconds=time.time()-python_start)) }",
+            f"script runtime: { str(datetime.timedelta(seconds=int(model_stats['time']))) }",
             f"------------------------------",
         ]
         output = "\n".join(output)
