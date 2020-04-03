@@ -1,7 +1,7 @@
+import gc
 import os
 from itertools import chain
 
-import gc
 import numpy as np
 import pandas as pd
 from pandas import DataFrame
@@ -12,15 +12,18 @@ from src.dataset.Transforms import Transforms
 from src.settings import settings
 
 
-
 ### BUGFIX: Repeatedly calling model.predict(...) results in memory leak - https://github.com/keras-team/keras/issues/13118
-def submission_df(model, output_shape):
+def submission_df(model, output_shape, transform_X_args={}):
     gc.collect()
 
     submission = pd.DataFrame(columns=output_shape.keys())
     # large datasets on submit, so loop
     for data_id in range(0,4):
-        test_dataset      = DatasetDF(test_train='test', data_id=data_id, transform_X_args = {} )  # "normalize": True is default
+        test_dataset      = DatasetDF(
+            test_train='test',
+            data_id=data_id,
+            transform_X_args = { **transform_X_args, "normalize": True },
+        )
         test_dataset_rows = test_dataset.X['train'].shape[0]
         batch_size        = 64
         for index in range(0, test_dataset_rows, batch_size):
@@ -42,7 +45,7 @@ def submission_df(model, output_shape):
 ###
 ### Use submission_df() it seems to have more success on Kaggle
 ###
-def submission_df_generator(model, output_shape):
+def submission_df_generator(model, output_shape, transform_X_args={}):
     gc.collect()
 
     # if os.environ.get('KAGGLE_KERNEL_RUN_TYPE', 'Interactive') == 'Interactive':
@@ -52,6 +55,7 @@ def submission_df_generator(model, output_shape):
         globpath = f"{settings['dir']['data']}/test_image_data_*.parquet"
 
     # large datasets on submit, so loop via generator to avoid Out-Of-Memory errors
+    transform_X_args = { **transform_X_args, "normalize": True }
     submission  = pd.DataFrame(columns=output_shape.keys())
     cache_index = 0
     for cache in ParquetImageDataGenerator.cache_generator(
@@ -71,7 +75,7 @@ def submission_df_generator(model, output_shape):
                 try:
                     batch = cache[index : index+batch_size]
                     if batch.shape[0] == 0: continue
-                    X           = Transforms.transform_X(batch)  # normalize=True is default
+                    X           = Transforms.transform_X(batch, **transform_X_args)
                     predictions = model.predict_on_batch(X)
                     submission  = submission.append(
                         pd.DataFrame({

@@ -12,8 +12,6 @@ from src.util.csv import df_to_submission_csv, submission_df_generator
 from src.util.hparam import hparam_key, model_compile_fit
 from src.util.logs import log_model_stats
 
-
-
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 
 # NOTE: This line doesn't work on Kaggle
@@ -144,7 +142,7 @@ if __name__ == '__main__':
 
     model, model_stats, output_shape = multi_output_df_cnn(train_hparams, model_hparams, pipeline_name)
 
-    log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
+    log_model_stats(model_stats, logfilename, { "model": model_hparams, "train": train_hparams })
 
     submission = submission_df_generator(model, output_shape)
     df_to_submission_csv( submission, csv_filename )

@@ -1,13 +1,11 @@
+import datetime
 import os
 import time
-from datetime import datetime
 from typing import Dict, Union
 
-import humanize
 import simplejson
 
 from src.settings import settings
-
 
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
@@ -22,17 +20,16 @@ def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union
 
 
 python_start = time.time()
-def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
+def log_model_stats(model_stats, logfilename, nested_hparams: Dict[str, Dict]):
     os.makedirs(os.path.dirname(logfilename), exist_ok=True)
     with open(logfilename, 'w') as file:
         output = [
             "------------------------------",
             f"Completed",
             "------------------------------",
-            f"model_hparams: {model_hparams}",
-            f"train_hparams: {train_hparams}",
-            "------------------------------",
         ]
+        output += [ f"{name}: {hparams}" for name, hparams in nested_hparams.items() ]
+        output.append("------------------------------")
         output += [ f"settings[{key}]: {value}" for key, value in settings.items() ]
         output.append("------------------------------")
 
@@ -49,9 +46,9 @@ def log_model_stats(model_stats, logfilename, model_hparams, train_hparams):
         output.append("------------------------------")
         output += [
             f"------------------------------",
-            f"script started: { datetime.fromtimestamp( python_start ).strftime('%Y-%m-%d %H:%M:%S')}",
-            f"script ended:   { datetime.fromtimestamp( time.time()  ).strftime('%Y-%m-%d %H:%M:%S')}",
-            f"script runtime: { humanize.naturaldelta(  python_start - time.time() )}s",
+            f"script started: { datetime.datetime.fromtimestamp( python_start ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script ended:   { datetime.datetime.fromtimestamp( time.time()  ).strftime('%Y-%m-%d %H:%M:%S')}",
+            f"script runtime: { str(datetime.timedelta(seconds=time.time()-python_start)) }",
             f"------------------------------",
         ]
         output = "\n".join(output)

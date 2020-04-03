@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 import os
 import time
+from collections import ChainMap
+from typing import Dict
 
 import glob2
 import numpy as np
@@ -17,34 +19,49 @@ from src.util.hparam import callbacks, hparam_key, model_compile, model_stats_fr
 from src.util.logs import log_model_stats
 
 
-
 def image_data_generator_cnn(
-        train_hparams,
-        model_hparams,
-        pipeline_name,
-        model_file=None,
-        log_dir=None,
-        verbose=2,
-        load_weights=True
+        train_hparams:    Dict,
+        model_hparams:    Dict,
+        transform_X_args: Dict,
+        transform_Y_args: Dict,
+        datagen_args:     Dict,
+        pipeline_name  = 'image_data_generator_cnn',
+        model_file     = None,
+        log_dir        = None,
+        verbose        = 2,
+        load_weights   = True
 ):
-    combined_hparams = { **model_hparams, **train_hparams }
+    combined_hparams = { **model_hparams, **train_hparams, **transform_X_args, **transform_Y_args, **datagen_args }
     train_hparams    = { **settings['hparam_defaults'], **train_hparams }
-    print("pipeline_name", pipeline_name)
-    print("train_hparams", train_hparams)
-    print("model_hparams", model_hparams)
+    if verbose:
+        print('-----')
+        print("pipeline_name",    pipeline_name)
+        print("train_hparams",    train_hparams)
+        print("transform_X_args", transform_X_args)
+        print("transform_Y_args", transform_Y_args)
+        print("datagen_args",     datagen_args)
+        print("model_file",       model_file)
+        print("log_dir",          log_dir)
+        print("load_weights",     load_weights)
+        print('-----')
 
     model_hparams_key = hparam_key(model_hparams)
     train_hparams_key = hparam_key(train_hparams)
+    transform_key     = hparam_key(ChainMap(*[ transform_X_args, transform_Y_args, datagen_args ]))
 
     # csv_data    = pd.read_csv(f"{settings['dir']['data']}/train.csv")
     model_file  = model_file or f"{settings['dir']['models']}/{pipeline_name}/{pipeline_name}-{model_hparams_key}.hdf5"
-    log_dir     = log_dir    or f"{settings['dir']['logs']}/{pipeline_name}/{model_hparams_key}/{train_hparams_key}"
+    log_dir     = log_dir    or f"{settings['dir']['logs']}/{pipeline_name}/{transform_key}/"
 
     os.makedirs(os.path.dirname(model_file), exist_ok=True)
     os.makedirs(log_dir,                     exist_ok=True)
 
     dataset_rows = ParquetFile(f"{settings['dir']['data']}/train_image_data_0.parquet").metadata.num_rows
-    dataset      = DatasetDF(size=1)
+    dataset      = DatasetDF(
+        size=1,
+        transform_X_args=transform_X_args,
+        transform_Y_args=transform_Y_args,
+    )
     input_shape  = dataset.input_shape()
     output_shape = dataset.output_shape()
     model = MultiOutputCNN(
@@ -75,28 +92,12 @@ def image_data_generator_cnn(
     if verbose:
         model.summary()
 
-    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
-    datagen_args = {
-        # "rescale":          1./255,  # "normalize": True is default in Transforms
-        "zoom_range":         0.2,
-        "width_shift_range":  0.1,     # we already have centering
-        "height_shift_range": 0.1,     # we already have centering
-        "rotation_range":     45/2,
-        "shear_range":        45/2,
-        # "brightness_range":   0.5,   # Prebrightness normalized
-        "fill_mode":         'constant',
-        "cval": 0,
-        # "featurewise_center": True,             # No visible effect in plt.imgshow()
-        # "samplewise_center": True,              # No visible effect in plt.imgshow()
-        # "featurewise_std_normalization": True,  # No visible effect in plt.imgshow() | requires .fit()
-        # "samplewise_std_normalization": True,   # No visible effect in plt.imgshow() | requires .fit()
-        # "zca_whitening": True,                   # Kaggle, insufficent memory
-    }
     flow_args = {}
     flow_args['train'] = {
         "transform_X":      Transforms.transform_X,
-        "transform_X_args": {},  #  "normalize": True is default in Transforms
         "transform_Y":      Transforms.transform_Y,
+        "transform_X_args": transform_X_args,
+        "transform_Y_args": transform_Y_args,
         "batch_size":       train_hparams['batch_size'],
         "reads_per_file":   2,
         "resamples":        1,
@@ -175,7 +176,8 @@ if __name__ == '__main__':
     # - maxpool_layers=5 | cnns_per_maxpool=3 | dense_layers=1 | dense_units=512 | global_maxpool=True  | regularization=False
     # - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=False
     # - maxpool_layers=4 | cnns_per_maxpool=4 | dense_layers=1 | dense_units=256 | global_maxpool=False | regularization=True
-    model_hparams = {
+    hparams = {}
+    hparams['model'] = {
         "cnns_per_maxpool":   3,
         "maxpool_layers":     5,
         "cnn_units":         32,
@@ -183,12 +185,40 @@ if __name__ == '__main__':
         "cnn_strides":        1,
         "dense_layers":       1,
         "dense_units":      256,
-        "regularization": False,  # Produces worse results
-        "global_maxpool": False,  #
+        # "regularization": False,  # Produces worse results
+        # "global_maxpool": False,  #
         "activation":    'relu',  # 'relu' | 'crelu' | 'leaky_relu' | 'relu6' | 'softmax' | 'tanh' | 'hard_sigmoid' | 'sigmoid'
         "dropout":         0.25,
     }
-    train_hparams = {
+    hparams['transform_X'] = {
+        "resize":       2,
+        # "invert":    True,
+        "rescale":   True,
+        "denoise":   True,
+        "center":    True,
+        # "normalize": True,
+    }
+    hparams['transform_Y'] = {
+    }
+
+    # Source: https://www.kaggle.com/jamesmcguigan/bengali-ai-image-processing
+    hparams['datagen'] = {
+        # "rescale":          1./255,  # "normalize": True is default in Transforms
+        "zoom_range":         0.2,
+        "width_shift_range":  0.1,     # we already have centering
+        "height_shift_range": 0.1,     # we already have centering
+        "rotation_range":     45/2,
+        "shear_range":        45/2,
+        # "brightness_range":   0.5,   # Prebrightness normalized
+        "fill_mode":         'constant',
+        "cval": 0,
+        # "featurewise_center": True,             # No visible effect in plt.imgshow()
+        # "samplewise_center": True,              # No visible effect in plt.imgshow()
+        # "featurewise_std_normalization": True,  # No visible effect in plt.imgshow() | requires .fit()
+        # "samplewise_std_normalization": True,   # No visible effect in plt.imgshow() | requires .fit()
+        # "zca_whitening": True,                   # Kaggle, insufficent memory
+    }
+    hparams['train'] = {
         "optimizer":     "Adadelta",
         "scheduler":     "plateau10",
         "learning_rate": 1,
@@ -199,22 +229,30 @@ if __name__ == '__main__':
         "loss_weights":  False,
     }
     if os.environ.get('KAGGLE_KERNEL_RUN_TYPE') == 'Interactive':
-        train_hparams['patience'] = 0
-        train_hparams['epochs']   = 1
-    train_hparams = { **settings['hparam_defaults'], **train_hparams }
+        hparams['train']['patience'] = 0
+        hparams['train']['epochs']   = 1
+    hparams['train'] = { **settings['hparam_defaults'], **hparams['train'] }
 
-    argparse_from_dicts([train_hparams, model_hparams], inplace=True)
+    argparse_from_dicts(list(hparams.values()), inplace=True)
 
 
-    pipeline_name     = "image_data_generator_cnn"
-    model_hparams_key = hparam_key(model_hparams)
-    train_hparams_key = hparam_key(train_hparams)
-    logfilename       = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.log"
-    csv_filename      = f"{settings['dir']['submissions']}/{pipeline_name}-{model_hparams_key}-submission.csv"
+    pipeline_name         = "image_data_generator_cnn"
+    hparams_model_key     = hparam_key(hparams['model'])
+    hparams_transform_key = hparam_key(ChainMap(*[ hparams['transform_X'], hparams['transform_Y'], hparams['datagen'] ]))
+    logfilename           = f"{settings['dir']['submissions']}/{pipeline_name}/{hparams_transform_key}/{hparams_model_key}-submission.log"
+    csv_filename          = f"{settings['dir']['submissions']}/{pipeline_name}/{hparams_transform_key}/{hparams_model_key}-submission.csv"
 
-    model, model_stats, output_shape = image_data_generator_cnn(train_hparams, model_hparams, pipeline_name)
+    model, model_stats, output_shape = image_data_generator_cnn(
+        train_hparams    = hparams['train'],
+        model_hparams    = hparams['model'],
+        transform_X_args = hparams['transform_X'],
+        transform_Y_args = hparams['transform_Y'],
+        datagen_args     = hparams['datagen'],
+        pipeline_name    = pipeline_name,
+        load_weights     = bool(os.environ.get('KAGGLE_KERNEL_RUN_TYPE'))
+    )
 
-    log_model_stats(model_stats, logfilename, model_hparams, train_hparams)
+    log_model_stats(model_stats, logfilename, hparams)
 
     submission = submission_df_generator(model, output_shape)
     df_to_submission_csv( submission, csv_filename )

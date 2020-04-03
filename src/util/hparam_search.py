@@ -18,22 +18,29 @@ def hparam_options_length(hparam_options_value) -> int:
     except: return 1
 
 
-def hparam_run_name(hparams: Dict, hparam_options: Dict) -> AnyStr:
+def hparam_run_name(hparams: Dict, hparam_options: Dict = None) -> AnyStr:
     return "_".join([
         f"{key}={value}"
         for key, value in sorted(hparams.items())
-        if key in hparam_options and hparam_options_length(hparam_options[key]) >= 2
+        if not hparam_options
+           or (
+                key in hparam_options
+            and hparam_options_length(hparam_options[key]) >= 2
+           )
     ])
 
 
 
-def hparam_logdir(hparams: Dict, hparam_options: Dict, log_dir: AnyStr) -> AnyStr:
+def hparam_logdir(hparams: Dict, hparam_options: Dict = None, log_dir: AnyStr = '') -> AnyStr:
     key_name = "-".join([
         f"{key}"
         for key, value in sorted(hparams.items())
-        if key in hparam_options
-           and not str(key).startswith('~')  # exclude ~random
-           and hparam_options_length(hparam_options[key]) >= 2
+        if not hparam_options
+           or (
+                key in hparam_options
+            and not str(key).startswith('~')  # exclude ~random
+            and hparam_options_length(hparam_options[key]) >= 2
+           )
     ])
     run_name = hparam_run_name(hparams, hparam_options)
     dir_name = os.path.join(log_dir, key_name, run_name)

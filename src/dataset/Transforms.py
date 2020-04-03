@@ -1,14 +1,13 @@
+import gc
 import math
 from typing import AnyStr, Dict, List, Union
 
-import gc
 import numpy as np
 import pandas as pd
 import skimage.measure
 from pandas import DataFrame, Series
 
 from src.settings import settings
-
 
 
 class Transforms():
@@ -19,7 +18,11 @@ class Transforms():
 
     @classmethod
     #@profile
-    def transform_Y(cls, df: DataFrame, Y_field: Union[List[str],str] = None) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
+    def transform_Y(cls,
+                    df: DataFrame,
+                    Y_field: Union[List[str],str] = None
+    ) -> Union[DataFrame,Dict[AnyStr,DataFrame]]:
+
         ### Profiler: 0.2% of DatasetDF() runtime
         labels = df['image_id'].values
         try:             output_df = cls.csv_data.loc[labels]
