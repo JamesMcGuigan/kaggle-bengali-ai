@@ -10,10 +10,11 @@ from src.settings import settings
 
 def model_stats_from_history(history, timer_seconds=0, best_only=False) -> Union[None, Dict]:
     if 'val_loss' in history.history:
-        best_epoch            = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
-        model_stats           = { key: value[best_epoch] for key, value in history.history.items() }
-        model_stats['time']   = timer_seconds
-        model_stats['epochs'] = len(history.history['loss'])
+        best_epoch              = history.history['val_loss'].index(min( history.history['val_loss'] )) if best_only else -1
+        model_stats             = { key: value[best_epoch] for key, value in history.history.items() }
+        model_stats['time']     = timer_seconds
+        model_stats['time_min'] = round(timer_seconds / 60, 1)
+        model_stats['epochs']   = len(history.history['loss'])
     else:
         model_stats = None
     return model_stats
