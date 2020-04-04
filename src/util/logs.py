@@ -1,9 +1,9 @@
 import datetime
 import os
-import time
 from typing import Dict, Union
 
 import simplejson
+import time
 
 from src.settings import settings
 
@@ -28,9 +28,9 @@ def log_model_stats(model_stats, logfilename, nested_hparams: Dict[str, Dict]):
             f"Completed",
             "------------------------------",
         ]
-        output += [ f"{name}: {hparams}" for name, hparams in nested_hparams.items() ]
+        output += [ f"{name}: {hparams}" for name, hparams in sorted(nested_hparams.items()) ]
         output.append("------------------------------")
-        output += [ f"settings[{key}]: {value}" for key, value in settings.items() ]
+        output += [ f"settings[{key}]: {value}" for key, value in sorted(settings.items()) ]
         output.append("------------------------------")
 
         if isinstance(model_stats, dict):

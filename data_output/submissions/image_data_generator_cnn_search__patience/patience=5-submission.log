@@ -1,0 +1,42 @@
+------------------------------
+Completed
+------------------------------
+datagen: {'zoom_range': 0.2, 'shear_range': 22.5, 'rotation_range': 22.5, 'cval': 0, 'fill_mode': 'constant', 'height_shift_range': 0.1, 'width_shift_range': 0.1}
+model: {'global_maxpool': False, 'regularization': False, 'dropout': 0.25, 'cnn_strides': 1, 'dense_units': 256, 'cnn_units': 32, 'cnn_kernel': 3, 'cnns_per_maxpool': 3, 'activation': 'relu', 'maxpool_layers': 5, 'dense_layers': 1}
+train: {'optimizer': 'Nadam', 'scheduler': 'plateau10', 'learning_rate': 0.01, 'epochs': 999, 'batch_size': 128, 'patience': 5}
+transform_X: {'center': True, 'rescale': True, 'resize': 2, 'denoise': True}
+transform_Y: {}
+------------------------------
+settings[dir]: {'data': './input/bengaliai-cv19', 'features': './input_features/bengaliai-cv19/', 'models': './data_output/models', 'submissions': './data_output/submissions', 'logs': './logs'}
+settings[hparam_defaults]: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'epochs': 99, 'patience': 10, 'loops': 1, 'timeout': '24h'}
+settings[verbose]: {'tensorboard': True, 'fit': 1}
+------------------------------
+{
+    "loss": "0.719535598847188",
+    "grapheme_root_loss": "0.212714",
+    "vowel_diacritic_loss": "0.069492966",
+    "consonant_diacritic_loss": "0.072000325",
+    "grapheme_loss": "0.36777025",
+    "grapheme_root_accuracy": "0.9415662",
+    "vowel_diacritic_accuracy": "0.9827041",
+    "consonant_diacritic_accuracy": "0.98050207",
+    "grapheme_accuracy": "0.9317372",
+    "val_loss": "0.6727236848020431",
+    "val_grapheme_root_loss": "0.21633545",
+    "val_vowel_diacritic_loss": "0.078522146",
+    "val_consonant_diacritic_loss": "0.0662884",
+    "val_grapheme_loss": "0.31157774",
+    "val_grapheme_root_accuracy": "0.9437883",
+    "val_vowel_diacritic_accuracy": "0.98158306",
+    "val_consonant_diacritic_accuracy": "0.98138285",
+    "val_grapheme_accuracy": "0.9286944",
+    "lr": "1.0000001e-06",
+    "time": "4504",
+    "epochs": "29"
+}
+------------------------------
+------------------------------
+script started: 2020-04-04 18:37:43
+script ended:   2020-04-04 19:52:56
+script runtime: 1:15:04
+------------------------------

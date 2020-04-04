@@ -451,6 +451,9 @@ TODO:
 
 ## Hyperparameter Search
 
+Additional Visualizations of Hyperparameter Search
+- [notebooks/Hyperparamer Search.ipynb](notebooks/Hyperparamer Search.ipynb)
+
 Previous research on MINST produced the following shortlist of Optimizer / Learning Rate / Scheduler combinations 
 ```
 "optimized_scheduler": {

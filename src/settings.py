@@ -17,10 +17,10 @@ settings['hparam_defaults'] = {
     "epochs":         99,
 
     "patience": {
-        'Localhost':    10,
+        'Localhost':    8,
         'Interactive':  0,
-        'Batch':        10,
-    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 10),
+        'Batch':        6,
+    }.get(os.environ.get('KAGGLE_KERNEL_RUN_TYPE','Localhost'), 6),
 
     "loops": {
         'Localhost':   1,

@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-import atexit
-import itertools
 import os
 import random
 import shutil
 import subprocess
-import sys
 import traceback
 from collections import ChainMap
 
+import atexit
+import itertools
+import sys
 import tensorflow as tf
 
 from src.pipelines.image_data_generator_cnn import image_data_generator_cnn
@@ -55,13 +55,13 @@ def image_data_generator_cnn_search(
         # "optimizer":     [ "RMSprop", "Adagrad", "Adam", "Nadam", "Adadelta" ],
         # "scheduler":     "constant",
         # "learning_rate": [ 0.001, 0.01 ],
-        "optimizer":     "Nadam",
-        "scheduler":     "plateau10",
-        "learning_rate": 0.01,
+        "optimizer":       "Nadam",         # Nadam 0.01 + plateau10 converges quickly
+        "scheduler":       "plateau10",
+        "learning_rate":   0.01,
         # "best_only":     True,
-        "batch_size":    [16, 32, 64, 128, 256, 512],  # IO bound | GPU max memory = 512 | 128 seems optimal
-        # "patience":      10,
-        "epochs":        5,
+        "batch_size":      128,  # IO bound | GPU max memory = 512 | 128 seems optimal
+        "patience":        [0,1,2,3,4,5,6,8,16,32],
+        "epochs":          999,
         # "loss_weights":  False,
         # "timeout":       "6h"
     }
@@ -122,8 +122,8 @@ def image_data_generator_cnn_search(
     random.shuffle(combninations)
     stats_history = []
 
-    pipeline_name  = "image_data_generator_cnn_search_train_model"
-    pipeline_name += "_batch"
+    pipeline_name  = "image_data_generator_cnn_search_"
+    pipeline_name += "_patience"
     # pipeline_name += "_" + "_".join(sorted([ key for key,values in combninations_search.items() if len(values) >= 2 ]))
 
     print(f"--- Testing {len(combninations)} combinations")
