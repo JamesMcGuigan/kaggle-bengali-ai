@@ -60,7 +60,8 @@ def image_data_generator_cnn_search(
         "learning_rate":   0.01,
         # "best_only":     True,
         "batch_size":      128,  # IO bound | GPU max memory = 512 | 128 seems optimal
-        "patience":        [0,1,2,3,4,5,6,8,16,32],
+        "patience":        [2,4],
+        "min_lr":          [1e-05, 1e-07],
         "epochs":          999,
         # "loss_weights":  False,
         # "timeout":       "6h"

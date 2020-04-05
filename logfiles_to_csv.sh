@@ -14,7 +14,8 @@ COLS="time epochs val_loss val_grapheme_root_accuracy val_vowel_diacritic_accura
         for key in $COLS;
           do grep "$key\":" $file | sed 's/^.*://' | perl -p -e 's/[,\s]*$/,/';
         done;
-        echo "$file,`echo $file | sed 's/^.*\///g' | tr '-' ','`";
+        echo $file | sed 's/^.*\///g'
+        # echo "$file,`echo $file | sed 's/^.*\///g' | tr '-' ','`";
       ) | tr '\n' ' '; echo;
     done
   ) |

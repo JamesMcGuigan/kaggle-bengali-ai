@@ -1,10 +1,10 @@
-import math
 import os
 import re
-import time
 from typing import AnyStr, Dict, Union
 
+import math
 import tensorflow as tf
+import time
 from tensorboard.plugins.hparams.api import KerasCallback
 from tensorflow.keras.backend import categorical_crossentropy
 from tensorflow.keras.callbacks import EarlyStopping, LearningRateScheduler, ModelCheckpoint, ReduceLROnPlateau
@@ -14,8 +14,6 @@ from src.dataset.DatasetDF import DatasetDF
 from src.settings import settings
 from src.util.logs import model_stats_from_history
 from src.vendor.CLR.clr_callback import CyclicLR
-
-
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # 0, 1, 2, 3 # Disable Tensortflow Logging
 # tf.keras.backend.set_floatx('float16')  # Potentially causes problems with Tensortflow
@@ -29,10 +27,12 @@ def min_lr(hparams):
     # tensorboard --logdir logs/convergence_search/min_lr-optimized_scheduler-random-scheduler/ --reload_multifile=true
     # There is a high degree of randomness in this parameter, so it is hard to distinguish from statistical noise
     # Lower min_lr values for CycleCR tend to train slower
-    hparams = { **settings['hparam_defaults'], **hparams }
-    if 'min_lr'  in hparams:              return hparams['min_lr']
-    if hparams["optimizer"] == "SGD":     return 1e-05  # preferred by SGD
-    else:                                 return 1e-03  # fastest, least overfitting and most accidental high-scores
+    if 'min_lr'  in hparams:                           return hparams['min_lr']
+    if hparams.get('scheduler').startswith('CyclicLR'):
+        if hparams.get("optimizer") == "SGD":          return 1e-05  # preferred by SGD
+        else:                                          return 1e-03  # fastest, least overfitting and most accidental high-scores
+    if hparams.get('scheduler').startswith('plateau'): return 1e-07  # fastest termination
+    else:                                              return 1e-07
 
 
 # DOCS: https://ruder.io/optimizing-gradient-descent/index.html
@@ -82,7 +82,7 @@ def scheduler(hparams: dict, dataset: DatasetDF, verbose=False):
             monitor  = 'val_loss',
             factor   = 1 / factor,
             patience = math.floor(patience),
-            min_lr   = 0,   # min_lr(train_hparams),
+            min_lr   = min_lr(hparams),
             verbose  = verbose,
         )
 

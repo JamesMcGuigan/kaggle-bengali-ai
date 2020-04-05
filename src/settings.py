@@ -10,7 +10,7 @@ settings['hparam_defaults'] = {
     "optimizer":     "RMSprop",
     "scheduler":     "constant",
     "learning_rate": 0.001,
-    "min_lr":        0.001,
+    "min_lr":        1e-7,
     "split":         0.2,
     "batch_size":    128,
     "fraction":      1.0,

@@ -1,0 +1,43 @@
+------------------------------
+Completed
+------------------------------
+datagen: {'shear_range': 22.5, 'width_shift_range': 0.1, 'fill_mode': 'constant', 'zoom_range': 0.2, 'height_shift_range': 0.1, 'cval': 0, 'rotation_range': 22.5}
+model: {'dense_units': 256, 'cnn_kernel': 3, 'cnn_strides': 1, 'cnn_units': 32, 'cnns_per_maxpool': 3, 'maxpool_layers': 5, 'activation': 'relu', 'dense_layers': 1, 'dropout': 0.25, 'regularization': False, 'global_maxpool': False}
+train: {'patience': 4, 'learning_rate': 0.01, 'batch_size': 128, 'min_lr': 1e-07, 'epochs': 999, 'scheduler': 'plateau10', 'optimizer': 'Nadam'}
+transform_X: {'center': True, 'denoise': True, 'rescale': True, 'resize': 2}
+transform_Y: {}
+------------------------------
+settings[dir]: {'data': './input/bengaliai-cv19', 'features': './input_features/bengaliai-cv19/', 'models': './data_output/models', 'submissions': './data_output/submissions', 'logs': './logs'}
+settings[hparam_defaults]: {'optimizer': 'RMSprop', 'scheduler': 'constant', 'learning_rate': 0.001, 'min_lr': 0.001, 'split': 0.2, 'batch_size': 128, 'fraction': 1.0, 'epochs': 99, 'patience': 8, 'loops': 1, 'timeout': '24h'}
+settings[verbose]: {'tensorboard': True, 'fit': 1}
+------------------------------
+{
+    "loss": "0.5624981761198246",
+    "grapheme_root_loss": "0.16187772",
+    "vowel_diacritic_loss": "0.054486558",
+    "consonant_diacritic_loss": "0.056258693",
+    "grapheme_loss": "0.29139087",
+    "grapheme_root_accuracy": "0.9552789",
+    "vowel_diacritic_accuracy": "0.98690796",
+    "consonant_diacritic_accuracy": "0.9851263",
+    "grapheme_accuracy": "0.9471914",
+    "val_loss": "0.6529389252905182",
+    "val_grapheme_root_loss": "0.2180355",
+    "val_vowel_diacritic_loss": "0.06738433",
+    "val_consonant_diacritic_loss": "0.065702",
+    "val_grapheme_loss": "0.30181715",
+    "val_grapheme_root_accuracy": "0.9462706",
+    "val_vowel_diacritic_accuracy": "0.98574686",
+    "val_consonant_diacritic_accuracy": "0.98286426",
+    "val_grapheme_accuracy": "0.9341794",
+    "lr": "1.0000001e-05",
+    "time": "5073",
+    "time_min": "84.5",
+    "epochs": "31"
+}
+------------------------------
+------------------------------
+script started: 2020-04-05 01:49:01
+script ended:   2020-04-05 03:13:43
+script runtime: 1:24:33
+------------------------------
