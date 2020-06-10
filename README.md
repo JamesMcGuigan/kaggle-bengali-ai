@@ -90,6 +90,10 @@ time ./src/preprocessing/write_images_to_filesystem.py        # optional
 - [Unicode Visualization of the Bengali Alphabet](notebooks/Unicode%20Visualization%20of%20the%20Bengali%20Alphabet.ipynb)
 [[Kaggle Version](https://www.kaggle.com/jamesmcguigan/unicode-visualization-of-the-bengali-alphabet)]
 
+### Writeup and Submission
+- [Bengali AI - CNN Data Pipeline + Problem Solving](https://www.kaggle.com/jamesmcguigan/bengali-ai-cnn-data-pipeline-problem-solving)
+
+
 The Exploratory Data Analysis showed that only certain combinations of vowel/consonant diacritics where regularly
  combined with certain grapheme roots. 
  
