@@ -17,6 +17,7 @@ https://www.kaggle.com/c/bengaliai-cv19
 | Top 14                |  0.9491 | 0.9913 | Gold Medal   |       |
 | Top 5%  (102)         |  0.9348 | 0.9858 | Silver Medal |       |
 | Top 10% (205)         |  0.9306 | 0.9791 | Bronze Medal |       |
+| [Final Writeup](https://www.kaggle.com/jamesmcguigan/bengali-ai-cnn-data-pipeline-problem-solving?scriptVersionId=35914381) |  0.9038 | 0.9381 | 1410/2059 | Late Submission  |
 | [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=31218596) |  0.9010 | 0.9413 | | 4\*4 CNN + 1\*256 Dense |
 | [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=31203616) |  0.8961 | 0.9482 | | 3\*5 CNN + 1\*256 Dense + Y+=grapheme |
 | [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537) |  0.8921 | 0.9396 | | 3\*4 CNN + 2\*256 Dense + Y+=grapheme |
@@ -24,9 +25,6 @@ https://www.kaggle.com/c/bengaliai-cv19
 | [Multi Output DF CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-multi-output-df-cnn?scriptVersionId=30830488)         |  0.8828 | 0.9337 | | 3\*4 CNN + 2\*256 Dense + Y+=grapheme - no augmentation |
 | [ImageDataGenerator - CNN](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=31262979) |  0.8797 | 0.9198 | | 4\*4 CNN + 1\*256 Dense + Y+=grapheme + Regularization  |
 | sample_submission.csv |  0.0614 | 0.0614 | Random Score |       |
-
-
-| **Top 3%  (44/2059)** [src/pipelines/image_data_generator_cnn.py](src/pipelines/image_data_generator_cnn.py) | **[0.9396](https://www.kaggle.com/jamesmcguigan/bengali-ai-imagedatagenerator-cnn?scriptVersionId=30636537)** | Late Submission |
 
 
 ## Dataset
