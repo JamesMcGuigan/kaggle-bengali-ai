@@ -399,7 +399,7 @@ This approach used `ImageDataGenerator()` for Image Augmentation with a custom
 `ParquetImageDataGenerator.flow_from_parquet()` subclass function to read the parquet files in a memory optimized
  fashion
 
-The following hyperparameters generated a 0.9396 Kaggle Score (44/2059 = top 3% | Late Submission) 
+The following hyperparameters generated a 0.9396 Kaggle Score
 ```
 model_hparams = {
     "cnns_per_maxpool":   3,
@@ -454,7 +454,7 @@ TODO:
 ## Hyperparameter Search
 
 Additional Visualizations of Hyperparameter Search
-- [notebooks/Hyperparamer Search.ipynb](notebooks/Hyperparamer Search.ipynb)
+- [notebooks/Hyperparamer Search.ipynb](notebooks/Hyperparamer%20Search.ipynb)
 
 Previous research on MINST produced the following shortlist of Optimizer / Learning Rate / Scheduler combinations 
 ```
